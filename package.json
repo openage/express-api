@@ -1,0 +1,37 @@
+{
+    "name": "@open-age/express-api",
+    "version": "1.0.0",
+    "description": "a route helper to convert express to api",
+    "main": "index.js",
+    "scripts": {
+        "test": "test"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/openage/express-api.git"
+    },
+    "keywords": [
+        "api",
+        "express",
+        "routes"
+    ],
+    "dependencies": {
+        "@open-age/logger": "^1.0.2",
+        "app-root-path": "^1.3.0",
+        "config": "^1.21.0",
+        "path-exists": "^3.0.0",
+        "underscore": "^1.8.3"
+    },
+    "author": "Sunny Parkash <sunny.parkash@gmail.com> (https://github.com/sunnyparkash)",
+    "license": "WTFPL",
+    "bugs": {
+        "url": "https://github.com/openage/express-api/issues"
+    },
+    "homepage": "https://github.com/openage/express-api#readme",
+    "devDependencies": {
+        "chai": "^3.5.0",
+        "chai-http": "^2.0.1",
+        "eslint": "^4.9.0",
+        "mocha": "^2.4.5"
+    }
+}
