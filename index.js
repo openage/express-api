@@ -77,7 +77,7 @@ const validatorFn = function (apiName, action) {
 
   var validator = `${appRoot}/${apiConfig.validators.dir}/${apiName}`;
 
-  if (!pathExists.sync(`${validator}/.js`)) {
+  if (!pathExists.sync(`${validator}.js`)) {
     return null;
   }
   var fn = require(validator)[actionValidator];
