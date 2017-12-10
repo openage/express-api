@@ -29,7 +29,7 @@ const responseHelper = function (res) {
     failure: function (error, message) {
       var val = {
         isSuccess: false,
-        message: message,
+        message: message || 'errors' in apiConfig ? apiConfig.errors[error]: message,
         error: error
       };
       res.log.error(message || 'failed', error);
