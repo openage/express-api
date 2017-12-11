@@ -9,7 +9,6 @@ var apiConfig = require('config').api || {};
 
 apiConfig.dir = apiConfig.dir || 'api';
 apiConfig.root = apiConfig.root || 'api';
-apiConfig.errors = apiConfig.errors|| [];
 apiConfig.validators = apiConfig.validators || {};
 apiConfig.validators.dir = apiConfig.validators.dir || 'validators';
 
@@ -29,7 +28,7 @@ const responseHelper = function (res) {
     failure: function (error, message) {
       var val = {
         isSuccess: false,
-        message: message || apiConfig.errors[error],
+        message: message || 'errors' in apiConfig ? apiConfig.errors[error]: message,
         error: error
       };
       res.log.error(message || 'failed', error);
