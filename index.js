@@ -55,13 +55,16 @@ const responseHelper = function (res) {
       res.log.info(message || 'success', val);
       res.json(val);
     },
-    page: function (items, total, pageNo) {
+    page: function (items, pageSize, pageNo, total) {
 
       var val = {
         isSuccess: true,
         pageNo: pageNo || 1,
         items: items,
-        total: total || items.length
+        total: items.length || pageSize, // TODO: obsolete
+        pageSize: pageSize || items.length,
+        totalRecords: total, // TODO: obsolete
+        count: total
       };
 
       res.log.info('page', val);
