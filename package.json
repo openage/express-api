@@ -4,7 +4,9 @@
     "description": "a route helper to convert express to api",
     "main": "index.js",
     "scripts": {
-        "test": "test"
+        "test": "test",
+        "release:patch": "npm version patch",
+        "publish": "npm publish --access public"
     },
     "repository": {
         "type": "git",
