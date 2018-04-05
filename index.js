@@ -265,10 +265,10 @@ var withApp = function (app) {
                     if (retVal && retVal.then && typeof retVal.then === 'function') {
                         return retVal.then(value => {
                             logger.end()
-                            if (res.finished) {
+                            if (res.finished || value === undefined) {
                                 return;
                             }
-                            if (typeof value === 'string' || value === null || value === undefined) {
+                            if (typeof value === 'string' || value === null) {
                                 res.success(value)
                             } else if (value instanceof Array) {
                                 res.page(value)
