@@ -25,8 +25,16 @@ const responseHelper = function (res) {
         failure: function (error, message) {
             let val = {
                 isSuccess: false,
-                message: message || 'errors' in apiConfig ? apiConfig.errors[error] : message,
-                error: error
+                message: '',
+                error: ''
+            }
+
+            if (message) {
+                val.message = message
+            } else if ('errors' in apiConfig) {
+                val.message = apiConfig.errors[error] || 'Internal Server Error'
+            } else if (error) {
+                val.error = error.toString()
             }
 
             res.log.error(message || 'failed', error)
