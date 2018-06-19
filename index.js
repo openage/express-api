@@ -90,7 +90,7 @@ const responseHelper = function (res) {
     }
 }
 
-var importerFn = async(apiName, action) => {
+const importerFn = (apiName, action) => {
     if (action !== '/bulk') {
         return null
     }
@@ -130,8 +130,9 @@ var importerFn = async(apiName, action) => {
             }
 
             return fn(req, file, format, ext).then(items => {
-                req.body.items = items;
+                req.body.items = items
                 logger.end()
+                next()
             }).catch(err => {
                 logger.error(err)
                 logger.end()
@@ -395,12 +396,19 @@ const fileWrapper = (req) => {
     return new Promise((resolve, reject) => {
         var form = new formidable.IncomingForm();
 
-        form.parse(req, function (err, fields, files) {
+        form.parse(req, function (err, fields, incomingFiles) {
             if (err) {
                 reject(err)
             }
-            resolve(files.file);
+            let keys = Object.keys(incomingFiles)
+            const files = []
 
+            keys.forEach(key => files.push(incomingFiles[key]))
+            if (files.length === 0) {
+                resolve(null)
+            } else {
+                resolve(files[0]);
+            }
         })
     })
 }
