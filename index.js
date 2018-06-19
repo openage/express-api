@@ -91,7 +91,7 @@ const responseHelper = function (res) {
 }
 
 var importerFn = async(apiName, action) => {
-    if (action !== 'bulk') {
+    if (action !== '/bulk') {
         return null
     }
 
@@ -113,8 +113,14 @@ var importerFn = async(apiName, action) => {
             let handler = `${appRoot}/${apiConfig.importers.dir}/${apiName}/${ext}/${format}`
 
             if (!pathExists.sync(`${handler}.js`)) {
-                logger.error(`importer '${handler}' does not exist `)
-                return next()
+                handler = `${appRoot}/${apiConfig.importers.dir}/${apiName}/${ext}`
+                if (!pathExists.sync(`${handler}.js`)) {
+                    handler = `${appRoot}/${apiConfig.importers.dir}/${apiName}`
+                    if (!pathExists.sync(`${handler}.js`)) {
+                        logger.debug(`importer '${handler}' does not exist `)
+                        return next()
+                    }
+                }
             }
 
             let fn = require(handler)['import']
@@ -123,18 +129,18 @@ var importerFn = async(apiName, action) => {
                 return next()
             }
 
-            fn(req, file).then(items => {
+            return fn(req, file, format, ext).then(items => {
                 req.body.items = items;
                 logger.end()
             }).catch(err => {
                 logger.error(err)
                 logger.end()
-                next(err)
+                return next(err)
             })
         }).catch(err => {
             logger.error(err)
             logger.end()
-            next(err)
+            return next(err)
         })
     }
 }
@@ -255,7 +261,7 @@ module.exports = function (app, apiOptions) {
                     action: handlerOption.action.toUpperCase(),
                     url: routeBase + (handlerOption.url || ''),
                     validator: validatorFn(params.model, methodName),
-                    importer: importerFn(params.model, methodName),
+                    importer: importerFn(params.model, handlerOption.url),
                     filter: handlerOption.filter,
                     method: method
                 }
