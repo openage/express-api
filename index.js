@@ -1,14 +1,20 @@
 'use strict'
 const pathExists = require('path-exists')
 const appRoot = require('app-root-path')
+const formidable = require('formidable');
 const logger = require('@open-age/logger')()
 
 const apiConfig = require('config').api || {}
 
 apiConfig.dir = apiConfig.dir || 'api'
 apiConfig.root = apiConfig.root || 'api'
+
 apiConfig.validators = apiConfig.validators || {}
 apiConfig.validators.dir = apiConfig.validators.dir || 'validators'
+
+apiConfig.importers = apiConfig.importers || {}
+apiConfig.importers.dir = apiConfig.importers.dir || 'importers'
+apiConfig.importers.defaultFile = apiConfig.importers.defaultFile || 'default'
 
 const responseHelper = function (res) {
     return {
@@ -81,6 +87,55 @@ const responseHelper = function (res) {
             res.log.end()
             res.json(val)
         }
+    }
+}
+
+var importerFn = async(apiName, action) => {
+    if (action !== 'bulk') {
+        return null
+    }
+
+    return function (req, res, next) {
+
+        const logger = res.log.start(`${apiConfig.importers.dir}/importers/${apiName}`)
+
+        return fileWrapper(req).then(file => {
+
+            if (!file) {
+                return next()
+            }
+
+            logger.debug(`got a file '${file.name}' to extract`)
+            const ext = file.name.split('.')[1]
+
+            const format = req.query['format'] || apiConfig.importers.defaultFile
+
+            let handler = `${appRoot}/${apiConfig.importers.dir}/${apiName}/${ext}/${format}`
+
+            if (!pathExists.sync(`${handler}.js`)) {
+                logger.error(`importer '${handler}' does not exist `)
+                return next()
+            }
+
+            let fn = require(handler)['import']
+            if (!fn) {
+                logger.error(`importer '${handler}' does not implement import `)
+                return next()
+            }
+
+            fn(req, file).then(items => {
+                req.body.items = items;
+                logger.end()
+            }).catch(err => {
+                logger.error(err)
+                logger.end()
+                next(err)
+            })
+        }).catch(err => {
+            logger.error(err)
+            logger.end()
+            next(err)
+        })
     }
 }
 
@@ -187,16 +242,20 @@ module.exports = function (app, apiOptions) {
         routes.register = function (options, param1, param2, param3) {
             let getHandlerOptions = function (handlerOption) {
                 let method = null
+                let methodName = null
                 if (handlerOption.method instanceof String || typeof handlerOption.method === 'string') {
+                    methodName = handlerOption.method
                     method = require(`${appRoot}/${apiOptions.root || apiConfig.dir}/${params.controller}`)[handlerOption.method]
                 } else {
+                    methodName = handlerOption.method.name
                     method = handlerOption.method
                 }
 
                 let val = {
                     action: handlerOption.action.toUpperCase(),
                     url: routeBase + (handlerOption.url || ''),
-                    validator: validatorFn(params.model, handlerOption.method),
+                    validator: validatorFn(params.model, methodName),
+                    importer: importerFn(params.model, methodName),
                     filter: handlerOption.filter,
                     method: method
                 }
@@ -261,6 +320,11 @@ var withApp = function (app) {
                     fnArray.push(handlerOptions.filter)
                 }
             }
+
+            if (handlerOptions.importer) {
+                fnArray.push(handlerOptions.importer)
+            }
+
             if (handlerOptions.validator) {
                 fnArray.push(handlerOptions.validator)
             }
@@ -320,6 +384,21 @@ var withApp = function (app) {
     }
 }
 
+
+const fileWrapper = (req) => {
+    return new Promise((resolve, reject) => {
+        var form = new formidable.IncomingForm();
+
+        form.parse(req, function (err, fields, files) {
+            if (err) {
+                reject(err)
+            }
+            resolve(files.file);
+
+        })
+    })
+}
+
 var crudOptions = function (filterFn) {
     return [{
         action: 'GET',
@@ -333,6 +412,11 @@ var crudOptions = function (filterFn) {
     }, {
         action: 'POST',
         method: 'create',
+        filter: filterFn
+    }, {
+        action: 'POST',
+        method: 'bulk',
+        url: '/bulk',
         filter: filterFn
     }, {
         action: 'PUT',
