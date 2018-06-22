@@ -97,6 +97,10 @@ const importerFn = (apiName, action) => {
 
     return function (req, res, next) {
 
+        if (req.body.items) {
+            return next()
+        }
+
         const logger = res.log.start(`${apiConfig.importers.dir}/importers/${apiName}`)
 
         return fileWrapper(req).then(file => {
