@@ -90,6 +90,40 @@ const responseHelper = function (res) {
     }
 }
 
+const importViaConfig = async(req, file, handler) => {
+    let type = 'csv'
+    switch (file.type) {
+    case 'text/csv':
+        type = 'csv'
+        break
+    case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+        type = 'xlsx'
+        break
+    default:
+        throw new Error(`file type '${file.type}' is not supported`)
+    }
+
+    const format = req.query['format'] || apiConfig.importers.defaultFile
+
+    let config = await handler.config(req, { format: format, type: type })
+
+    let rows = await require(`./parsers/${type}`).parse(file, config).rows()
+
+    if (!config.modelMap) {
+        return rows
+    }
+    const items = []
+
+    for (const row of rows) {
+        let mappedItem = config.modelMap(row, config, req)
+        if (!mappedItem) {
+            continue
+        }
+        items.push(mappedItem)
+    }
+    return items
+}
+
 const importerFn = (apiName, action) => {
     if (action !== '/bulk') {
         return null
@@ -114,26 +148,33 @@ const importerFn = (apiName, action) => {
 
             const format = req.query['format'] || apiConfig.importers.defaultFile
 
-            let handler = `${appRoot}/${apiConfig.importers.dir}/${apiName}/${ext}/${format}`
+            let handlerFile = `${appRoot}/${apiConfig.importers.dir}/${apiName}/${ext}/${format}`
 
-            if (!pathExists.sync(`${handler}.js`)) {
-                handler = `${appRoot}/${apiConfig.importers.dir}/${apiName}/${ext}`
-                if (!pathExists.sync(`${handler}.js`)) {
-                    handler = `${appRoot}/${apiConfig.importers.dir}/${apiName}`
-                    if (!pathExists.sync(`${handler}.js`)) {
-                        logger.debug(`importer '${handler}' does not exist `)
+            if (!pathExists.sync(`${handlerFile}.js`)) {
+                handlerFile = `${appRoot}/${apiConfig.importers.dir}/${apiName}/${ext}`
+                if (!pathExists.sync(`${handlerFile}.js`)) {
+                    handlerFile = `${appRoot}/${apiConfig.importers.dir}/${apiName}`
+                    if (!pathExists.sync(`${handlerFile}.js`)) {
+                        logger.debug(`importer '${handlerFile}' does not exist `)
                         return next()
                     }
                 }
             }
 
-            let fn = require(handler)['import']
-            if (!fn) {
-                logger.error(`importer '${handler}' does not implement import `)
+            let handler = require(handlerFile)
+
+            let handerPromise
+
+            if (handler.config) {
+                handerPromise = importViaConfig(req, file, handler)
+            } else if (handler.import) {
+                handerPromise = handler.import(req, file, format, ext)
+            } else {
+                logger.error(`importer '${handlerFile}' does not implement import `)
                 return next()
             }
 
-            return fn(req, file, format, ext).then(items => {
+            return handerPromise.then(items => {
                 req.body.items = items
                 logger.end()
                 next()
