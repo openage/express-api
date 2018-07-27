@@ -5,6 +5,65 @@ const dateToString = (value, format) => {
     return moment(value).format(format || 'YYYY-MM-DD')
 }
 
+const toDate = (value, timeZone) => {
+    if (!value.endsWith('Z')) {
+        value = `${value} ${timeZone}`
+    }
+    let date
+
+    if (moment(value).isValid()) {
+        date = moment(value).toDate()
+    } else if (moment(value, 'DD-MM-YYYY').isValid()) {
+        date = moment(value, 'DD-MM-YYYY').toDate()
+    } else if (moment(value, 'YYYY-MM-DD').isValid()) {
+        date = moment(value, 'YYYY-MM-DD').toDate()
+    } else if (moment(value, 'DD/MM/YY').isValid()) {
+        date = moment(value, 'DD/MM/YY').toDate()
+    }
+
+    return date
+}
+
+let getValue = (cell, header, config) => {
+    let value = cell.w
+
+    let type = 'string'
+
+    if (header.type) {
+        type = (header.type.name || header.type).toLowerCase()
+    }
+
+    switch (type) {
+    case 'number':
+        if (typeof cell.v === 'number') {
+            value = cell.v
+        } else if (!value) {
+            value = 0
+        } else if (value.indexOf('.') !== -1) {
+            value = parseFloat(value)
+        } else {
+            value = parseInt(value)
+        }
+        break
+    case 'boolean':
+        if (typeof cell.v === 'boolean') {
+            value = cell.v
+        } else {
+            value = !!cell.w
+        }
+        break
+    case 'date':
+        value = toDate(cell.w, config.timeZone)
+        break
+    case 'string':
+        value = '' + cell.v
+        break
+    default:
+        break
+    }
+    return value
+}
+
 const cols = ['A', 'B', 'C', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
 
 let getCell = (excelSheet, row, column) => {
@@ -55,16 +114,18 @@ const extractHeaders = (sheet, config) => {
             if (cell.t === 'z') {
                 break
             }
-            map.headerType = map.headerType || String
 
-            let type = typeof map.headerType
+            let headerType = 'string'
+            if (map.headerType) {
+                headerType = (header.headerType.name || header.headerType).toLowerCase()
+            }
 
-            switch (type) {
+            switch (headerType) {
             case 'string':
-                map.key = cell.v
+                map.key = '' + cell.v
                 break
             case 'date':
-                map.key = dateToString(cell.d)
+                map.key = dateToString(cell.w)
                 break
             }
         }
@@ -121,22 +182,8 @@ exports.parse = (file, config) => {
                     if (!cell || cell.t === 'z') {
                         continue
                     }
-
-                    item[header.key] = cell.v
-
-                    // switch (cell.t) {
-                    // case 's':
-                    //     item[header.key] = cell.v
-                    //     break
-                    // case 'd':
-                    //     item[header.key] = cell.d
-                    //     break
-                    // case 'n':
-                    //     item[header.key] = cell.n
-                    //     break
-                    // }
+                    item[header.key] = getValue(cell, header, config)
                 }
-
                 items.push(item)
             }
             return items

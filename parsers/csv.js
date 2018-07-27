@@ -20,7 +20,13 @@ const toDate = (value, timeZone) => {
 let getValue = (row, header, config) => {
     let value = row[header.label]
 
-    switch (header.type) {
+    let type = 'string'
+
+    if (header.type) {
+        type = (header.type.name || header.type).toLowerCase()
+    }
+
+    switch (type) {
     case 'number':
         if (!value) {
             value = 0
@@ -34,6 +40,7 @@ let getValue = (row, header, config) => {
         value = toDate(value, config.timeZone)
         break
     case 'string':
+        value = '' + value
         break
     default:
         break
