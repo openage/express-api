@@ -6,7 +6,7 @@ const dateToString = (value, format) => {
 }
 
 const toDate = (cell, timeZone) => {
-    let value = cell.z
+    let value = cell.w
         // if (!value.endsWith('Z')) {
         //     value = `${value} ${timeZone}`
         // }
