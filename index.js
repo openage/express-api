@@ -1,7 +1,9 @@
 'use strict'
 const pathExists = require('path-exists')
 const appRoot = require('app-root-path')
-const formidable = require('formidable');
+const formidable = require('formidable')
+const changeCase = require('change-case')
+
 const logger = require('@open-age/logger')()
 
 const apiConfig = require('config').api || {}
@@ -148,12 +150,14 @@ const importerFn = (apiName, action) => {
 
             const format = req.query['format'] || apiConfig.importers.defaultFile
 
-            let handlerFile = `${appRoot}/${apiConfig.importers.dir}/${apiName}/${ext}/${format}`
+            const type = changeCase.paramCase(apiName)
+
+            let handlerFile = `${appRoot}/${apiConfig.importers.dir}/${type}/${ext}/${format}`
 
             if (!pathExists.sync(`${handlerFile}.js`)) {
-                handlerFile = `${appRoot}/${apiConfig.importers.dir}/${apiName}/${ext}`
+                handlerFile = `${appRoot}/${apiConfig.importers.dir}/${type}/${ext}`
                 if (!pathExists.sync(`${handlerFile}.js`)) {
-                    handlerFile = `${appRoot}/${apiConfig.importers.dir}/${apiName}`
+                    handlerFile = `${appRoot}/${apiConfig.importers.dir}/${type}`
                     if (!pathExists.sync(`${handlerFile}.js`)) {
                         logger.debug(`importer '${handlerFile}' does not exist `)
                         return next()

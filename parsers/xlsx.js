@@ -5,23 +5,25 @@ const dateToString = (value, format) => {
     return moment(value).format(format || 'YYYY-MM-DD')
 }
 
-const toDate = (value, timeZone) => {
-    if (!value.endsWith('Z')) {
-        value = `${value} ${timeZone}`
-    }
-    let date
+const toDate = (cell, timeZone) => {
+    let value = cell.z
+        // if (!value.endsWith('Z')) {
+        //     value = `${value} ${timeZone}`
+        // }
 
     if (moment(value).isValid()) {
-        date = moment(value).toDate()
-    } else if (moment(value, 'DD-MM-YYYY').isValid()) {
-        date = moment(value, 'DD-MM-YYYY').toDate()
-    } else if (moment(value, 'YYYY-MM-DD').isValid()) {
-        date = moment(value, 'YYYY-MM-DD').toDate()
-    } else if (moment(value, 'DD/MM/YY').isValid()) {
-        date = moment(value, 'DD/MM/YY').toDate()
+        return moment(value).toDate()
+    }
+    if (moment(value, 'DD-MM-YYYY').isValid()) {
+        return moment(value, 'DD-MM-YYYY').toDate()
+    }
+    if (moment(value, 'YYYY-MM-DD').isValid()) {
+        return moment(value, 'YYYY-MM-DD').toDate()
+    }
+    if (moment(value, 'DD/MM/YY').isValid()) {
+        return moment(value, 'DD/MM/YY').toDate()
     }
 
-    return date
 }
 
 let getValue = (cell, header, config) => {
@@ -53,7 +55,7 @@ let getValue = (cell, header, config) => {
         }
         break
     case 'date':
-        value = toDate(cell.w, config.timeZone)
+        value = toDate(cell, config.timeZone)
         break
     case 'string':
         value = '' + cell.v
@@ -64,7 +66,7 @@ let getValue = (cell, header, config) => {
     return value
 }
 
-const cols = ['A', 'B', 'C', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
+const cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
 
 let getCell = (excelSheet, row, column) => {
     let cellName = cols[column] + (row + 1)
@@ -135,7 +137,8 @@ const extractHeaders = (sheet, config) => {
 }
 
 exports.parse = (file, config) => {
-    var excelSheet = XLSX.readFile(file.path).Sheets[config.sheet]
+    let sheets = XLSX.readFile(file.path).Sheets
+    var excelSheet = sheets[config.sheet]
     if (!excelSheet) {
         throw new Error(`Sheet '${config.sheet}' does not exist`)
     }
