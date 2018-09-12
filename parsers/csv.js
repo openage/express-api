@@ -29,18 +29,25 @@ let getValue = (row, header, config) => {
     switch (type) {
     case 'number':
         if (!value) {
-            value = 0
+            value = undefined
         } else if (value.indexOf('.') !== -1) {
             value = parseFloat(value)
         } else {
             value = parseInt(value)
         }
         break
+        // case 'boolean':
+        //     if (typeof cell.v === 'boolean') {
+        //         value = cell.v
+        //     } else {
+        //         value = !!cell.w
+        //     }
+        //     break
     case 'date':
-        value = toDate(value, config.timeZone)
+        value = value ? toDate(value, config.timeZone) : undefined
         break
     case 'string':
-        value = '' + value
+        value = value === undefined ? undefined : '' + value
         break
     default:
         break
@@ -61,6 +68,7 @@ exports.parse = (file, config) => {
                         for (let map of config.columnMap) {
                             item[map.key] = getValue(row, map, config)
                         }
+                        items.push(item)
                     })
                     .on('end', () => {
                         return resolve(items)
