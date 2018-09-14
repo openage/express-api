@@ -64,7 +64,7 @@ let getValue = (cell, header, config) => {
     return value
 }
 
-const cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
+const cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'AA', 'AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AH', 'AI', 'AJ', 'AK', 'AL', 'AM', 'AN', 'AO', 'AP', 'AQ', 'AR', 'AS', 'AT', 'AU', 'AV', 'AW', 'AX', 'AY', 'AZ']
 
 let getCell = (excelSheet, row, column) => {
     let cellName = cols[column] + (row + 1)
@@ -79,7 +79,7 @@ const extractHeaders = (sheet, config) => {
 
     for (let col = 0;; col++) {
         let cell = getCell(sheet, headerRow, col)
-        if (!cell || cell.t === 'z') {
+        if (!cell || cell.t === 'z' || !cell.v || cell.v === '') {
             break
         }
 
@@ -101,7 +101,14 @@ const extractHeaders = (sheet, config) => {
         headers.push(header)
     }
 
+    let columnMap = [];
     for (let map of config.columnMap) {
+        let item = JSON.parse(JSON.stringify(map))
+        item.type = map.type
+        columnMap.push(item)
+    }
+
+    for (let map of columnMap) {
         if (map.col === undefined) {
             let header = headers.find(item => item.label === map.label)
 
@@ -131,7 +138,7 @@ const extractHeaders = (sheet, config) => {
         }
     }
 
-    return config.columnMap
+    return columnMap
 }
 
 exports.parse = (file, config) => {
