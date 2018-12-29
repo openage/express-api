@@ -7,6 +7,9 @@ const dateToString = (value, format) => {
 
 const toDate = (value, timeZone) => {
     if (!value.endsWith('Z')) {
+        if (Date.parse(value)) {
+            value = moment(new Date(value)).format('DD-MM-YYYY')
+        }
         value = `${value} ${timeZone}`
     }
     let date
