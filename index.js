@@ -40,7 +40,7 @@ const responseHelper = function (res) {
             if (message) {
                 val.message = message
             } else if ('errors' in apiConfig) {
-                val.message = apiConfig.errors[error] || 'Internal Server Error'
+                val.message = apiConfig.errors[error.message || error] || 'Internal Server Error'
             } else if (error) {
                 val.error = error.toString()
             }
