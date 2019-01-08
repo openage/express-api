@@ -252,7 +252,10 @@ const validatorFn = function (apiName, action) {
 }
 
 const responseDecoratorFn = function (req, res, next) {
-    res.logger = logger.start(req.method + ' ' + req.url, req.body)
+    res.logger = logger.start({ location: req.method + ' ' + req.url, method: req.method, url: req.url })
+    if (req.body) {
+        res.logger.debug('body', req.body)
+    }
     res.log = res.logger // TODO: obsolete
     if (req.body) {
         res.log.debug(req.body)
