@@ -26,7 +26,7 @@ const responseHelper = function (res) {
                 message: message,
                 code: code
             }
-            res.log.info(message || 'success', val)
+            res.log.debug(message || 'success', val)
             res.log.end()
             res.json(val)
         },
@@ -69,7 +69,7 @@ const responseHelper = function (res) {
                 data: item,
                 code: code
             }
-            res.log.info(message || 'success', val)
+            res.log.debug(message || 'success', val)
             res.log.end()
 
             res.json(val)
@@ -85,24 +85,24 @@ const responseHelper = function (res) {
                 count: total
             }
 
-            res.log.info('page', val)
+            res.log.debug('page', val)
             res.log.end()
             res.json(val)
         }
     }
 }
 
-const importViaConfig = async(req, file, handler) => {
+const importViaConfig = async (req, file, handler) => {
     let type = 'csv'
     switch (file.type) {
-    case 'text/csv':
-        type = 'csv'
-        break
-    case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
-        type = 'xlsx'
-        break
-    default:
-        throw new Error(`file type '${file.type}' is not supported`)
+        case 'text/csv':
+            type = 'csv'
+            break
+        case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+            type = 'xlsx'
+            break
+        default:
+            throw new Error(`file type '${file.type}' is not supported`)
     }
 
     const format = req.query['format'] || apiConfig.importers.defaultFile
@@ -252,7 +252,7 @@ const validatorFn = function (apiName, action) {
 }
 
 const responseDecoratorFn = function (req, res, next) {
-    res.logger = logger.start(req.method + ' ' + req.url)
+    res.logger = logger.start(req.method + ' ' + req.url, req.body)
     res.log = res.logger // TODO: obsolete
     if (req.body) {
         res.log.debug(req.body)
@@ -417,24 +417,24 @@ var withApp = function (app) {
             })
 
             switch (handlerOptions.action.toUpperCase()) {
-            case 'GET':
-                app.get(handlerOptions.url, fnArray)
-                break
+                case 'GET':
+                    app.get(handlerOptions.url, fnArray)
+                    break
 
-            case 'POST':
-                app.post(handlerOptions.url, fnArray)
-                break
+                case 'POST':
+                    app.post(handlerOptions.url, fnArray)
+                    break
 
-            case 'PUT':
-                app.put(handlerOptions.url, fnArray)
-                break
+                case 'PUT':
+                    app.put(handlerOptions.url, fnArray)
+                    break
 
-            case 'DELETE':
-                app.delete(handlerOptions.url, fnArray)
-                break
+                case 'DELETE':
+                    app.delete(handlerOptions.url, fnArray)
+                    break
 
-            default:
-                break
+                default:
+                    break
             }
         }
     }
