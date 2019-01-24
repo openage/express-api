@@ -28,7 +28,7 @@ const responseHelper = function (res) {
         code: code,
         version: version
       }
-      res.log.debug(message || 'success', val)
+      res.log.silly(message || 'success', val)
       res.log.end()
       res.json(val)
     },
@@ -108,7 +108,7 @@ const responseHelper = function (res) {
         data: item,
         code: code
       }
-      res.log.debug(message || 'success', val)
+      res.log.silly(message || 'success', val)
       res.log.end()
 
       if (item.timeStamp) {
@@ -128,7 +128,7 @@ const responseHelper = function (res) {
         totalRecords: total // TODO: obsolete
       }
 
-      res.log.debug('page', val)
+      res.log.silly('page', val)
       res.log.end()
       res.json(val)
     }
@@ -188,7 +188,7 @@ const importerFn = (apiName, action) => {
         return next()
       }
 
-      logger.debug(`got a file '${file.name}' to extract`)
+      logger.silly(`got a file '${file.name}' to extract`)
       const ext = file.name.split('.')[1]
 
       const format = req.query['format'] || apiConfig.importers.defaultFile
@@ -300,9 +300,6 @@ const responseDecoratorFn = function (req, res, next) {
     res.logger.debug('body', req.body)
   }
   res.log = res.logger // TODO: obsolete
-  if (req.body) {
-    res.log.debug(req.body)
-  }
 
   let wrapper = responseHelper(res)
   res.accessDenied = wrapper.accessDenied
