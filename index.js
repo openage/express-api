@@ -135,7 +135,7 @@ const responseHelper = function (res) {
     }
 }
 
-const importViaConfig = async(req, file, handler) => {
+const importViaConfig = async (req, file, handler) => {
     let type = 'csv'
     switch (file.type) {
     case 'text/csv':
@@ -182,7 +182,6 @@ const importerFn = (apiName, action) => {
     }
 
     return function (req, res, next) {
-
         if (req.body.items) {
             return next()
         }
@@ -190,7 +189,6 @@ const importerFn = (apiName, action) => {
         const logger = res.log.start(`${apiConfig.importers.dir}/importers/${apiName}`)
 
         return fileWrapper(req).then(file => {
-
             if (!file) {
                 return next()
             }
@@ -444,7 +442,7 @@ var withApp = function (app) {
                         return retVal.then(value => {
                             logger.end()
                             if (res.finished || value === undefined) {
-                                return;
+                                return
                             }
                             if (typeof value === 'string' || value === null) {
                                 res.success(value)
@@ -490,10 +488,9 @@ var withApp = function (app) {
     }
 }
 
-
 const fileWrapper = (req) => {
     return new Promise((resolve, reject) => {
-        var form = new formidable.IncomingForm();
+        var form = new formidable.IncomingForm()
 
         form.parse(req, function (err, fields, incomingFiles) {
             if (err) {
@@ -506,7 +503,7 @@ const fileWrapper = (req) => {
             if (files.length === 0) {
                 resolve(null)
             } else {
-                resolve(files[0]);
+                resolve(files[0])
             }
         })
     })
