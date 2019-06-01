@@ -54,17 +54,17 @@ module.exports = function (app, apiOptions) {
             if (options.action) {
                 handlerParams = getHandlerOptions(options)
                 handlerParams.filter = handlerParams.filter || param1
-                withApp(app).register(handlerParams)
+                withApp(app, apiOptions).register(handlerParams)
             } else if (options instanceof Array) {
                 options.forEach((option) => {
                     handlerParams = getHandlerOptions(option)
                     handlerParams.filter = handlerParams.filter || param1
-                    withApp(app).register(handlerParams)
+                    withApp(app, apiOptions).register(handlerParams)
                 })
             } else if (options instanceof String || typeof options === 'string') {
                 if (options.toUpperCase() === 'REST' || options.toUpperCase() === 'CRUD') {
                     crudOptions(param1).forEach((option) => {
-                        withApp(app).register(getHandlerOptions(option))
+                        withApp(app, apiOptions).register(getHandlerOptions(option))
                     })
                 } else {
                     handlerParams.action = options.toUpperCase()
@@ -77,7 +77,7 @@ module.exports = function (app, apiOptions) {
                         handlerParams.method = param1
                         handlerParams.filter = param2
                     }
-                    withApp(app).register(handlerParams)
+                    withApp(app, apiOptions).register(handlerParams)
                 }
             }
             return routes
@@ -87,14 +87,14 @@ module.exports = function (app, apiOptions) {
     return self
 }
 
-var withApp = function (app) {
+var withApp = function (app, apiOptions) {
     return {
         register: function (handlerOptions) {
             if (!handlerOptions.method) {
                 return // the method may not exist at this time;
             }
             let fnArray = []
-            fnArray.push(requestHelper.middleware)
+            fnArray.push(requestHelper.getMiddleware(apiOptions))
 
             if (handlerOptions.filter) {
                 if (handlerOptions.filter instanceof Array) {
@@ -146,24 +146,24 @@ var withApp = function (app) {
             })
 
             switch (handlerOptions.action.toUpperCase()) {
-                case 'GET':
-                    app.get(handlerOptions.url, fnArray)
-                    break
+            case 'GET':
+                app.get(handlerOptions.url, fnArray)
+                break
 
-                case 'POST':
-                    app.post(handlerOptions.url, fnArray)
-                    break
+            case 'POST':
+                app.post(handlerOptions.url, fnArray)
+                break
 
-                case 'PUT':
-                    app.put(handlerOptions.url, fnArray)
-                    break
+            case 'PUT':
+                app.put(handlerOptions.url, fnArray)
+                break
 
-                case 'DELETE':
-                    app.delete(handlerOptions.url, fnArray)
-                    break
+            case 'DELETE':
+                app.delete(handlerOptions.url, fnArray)
+                break
 
-                default:
-                    break
+            default:
+                break
             }
         }
     }

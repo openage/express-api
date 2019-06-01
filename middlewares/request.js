@@ -1,11 +1,12 @@
 const moment = require('moment')
+const appRoot = require('app-root-path')
+
 const logger = require('@open-age/logger')()
 
 const apiConfig = require('config').api || {}
-const contextParser = require('../parsers/context')
+const claimsParser = require('../parsers/claims')
 
 const decorateResponse = (res, log) => {
-
     res.success = (message, code, version) => {
         let val = {
             isSuccess: true,
@@ -116,34 +117,102 @@ const decorateResponse = (res, log) => {
         log.end()
         res.json(val)
     }
-
 }
 
-exports.middleware = function (req, res, next) {
-    const log = logger.start({ location: req.method + ' ' + req.url, method: req.method, url: req.url })
-    res.log = log
-    res.logger = log
+const getContext = async (req, log, builder) => {
+    let claims = claimsParser.parse(req, log)
+    const context = builder ? await builder(claims, log) : claims
 
-    if (req.body) {
-        log.debug(req.body)
+    context.permissions = context.permissions || []
+
+    context.config = context.config || {
+        timeZone: 'IST'
+    }
+    if (context.role) {
+        if (context.organization) {
+            context.permissions.push('organization.user')
+        }
+
+        if (context.tenant) {
+            context.permissions.push('tenant.user')
+        }
+    } else {
+        if (context.organization) {
+            context.permissions.push('organization.guest')
+        }
+
+        if (context.tenant) {
+            context.permissions.push('tenant.guest')
+        }
     }
 
-    contextParser.parse(req, log).then(context => {
-        req.context = context
-        decorateResponse(res, log)
-        next()
-    }).catch(err => {
-        let error = err
-        let message = err.message
-        if ('errors' in apiConfig) {
-            error = 'UNKOWN'
-            message = 'Internal Server Error'
+    if (!context.hasPermission) {
+        context.hasPermission = (request) => {
+            if (!request) {
+                return true
+            }
+
+            let items = Array.isArray(request) ? request : [request]
+
+            return context.permissions.find(permission => {
+                return items.find(item => item.toLowerCase() === permission)
+            })
         }
-        res.json({
-            isSuccess: false,
-            message: message,
-            error: error,
-            code: 'UNKNOWN'
+    }
+
+    if (!context.getConfig) {
+        context.getConfig = (identifier, defaultValue) => {
+            var keys = identifier.split('.')
+            var value = context.config
+
+            for (var key of keys) {
+                if (!value[key]) {
+                    return defaultValue
+                }
+                value = value[key]
+            }
+
+            return value
+        }
+    }
+
+    return context
+}
+exports.getMiddleware = (apiOptions) => {
+    let builder
+
+    if (apiOptions && apiOptions.context && apiOptions.context.builder) {
+        builder = apiOptions.context.builder
+    } else if (apiConfig && apiConfig.context && apiConfig.context.builder) {
+        builder = require(`${appRoot}/${apiConfig.context.builder}`).create
+    }
+
+    return (req, res, next) => {
+        const log = logger.start({ location: req.method + ' ' + req.url, method: req.method, url: req.url })
+        res.log = log
+        res.logger = log
+
+        if (req.body) {
+            log.debug(req.body)
+        }
+
+        getContext(req, log, builder).then(context => {
+            req.context = context
+            decorateResponse(res, log)
+            next()
+        }).catch(err => {
+            let error = err
+            let message = err.message
+            if ('errors' in apiConfig) {
+                error = 'UNKOWN'
+                message = 'Internal Server Error'
+            }
+            res.json({
+                isSuccess: false,
+                message: message,
+                error: error,
+                code: 'UNKNOWN'
+            })
         })
-    })
+    }
 }
