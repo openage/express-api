@@ -17,13 +17,16 @@ const fetch = (req, modelName, paramName) => {
 
 exports.parse = (req, logger) => {
     let claims = {
-        logger: logger,
         id: fetch(req, 'context', 'id') || uuid.v1(),
         session: fetch(req, 'session', 'id'),
         role: fetch(req, 'role', 'key') || fetch(req, 'role', 'id'),
         organization: fetch(req, 'organization', 'code') || fetch(req, 'organization', 'id'),
         tenant: fetch(req, 'tenant', 'code') || fetch(req, 'tenant', 'id')
     }
+
+    logger.silly(claims)
+
+    claims.logger = logger
 
     return claims
 }

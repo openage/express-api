@@ -9,6 +9,37 @@ const apiConfig = require('config').api || {}
 apiConfig.dir = apiConfig.dir || 'api'
 apiConfig.root = apiConfig.root || 'api'
 
+const extractMiddlewares = (middlewares) => {
+    const parseMiddleware = (item) => {
+        if (typeof item === 'function') {
+            return [item]
+        }
+
+        if (item instanceof Array) {
+            return item.map(i => parseMiddleware(i))
+        }
+
+        if (item.permissions) {
+            return [(req, res, next) => {
+                if (!req.context.hasPermission(item.permissions)) {
+                    res.accessDenied()
+                } else {
+                    next()
+                }
+            }]
+        }
+        return []
+    }
+
+    if (!middlewares) {
+        return []
+    }
+    if (middlewares instanceof Array) {
+        return middlewares.map(i => parseMiddleware(i))
+    }
+    return [parseMiddleware(middlewares)]
+}
+
 module.exports = function (app, apiOptions) {
     apiOptions = apiOptions || {}
     let self = {}
@@ -40,6 +71,7 @@ module.exports = function (app, apiOptions) {
                 let val = {
                     action: handlerOption.action.toUpperCase(),
                     url: routeBase + (handlerOption.url || ''),
+                    permissions: handlerOption.permissions,
                     validator: validationHelper.getMiddlware(params.model, methodName),
                     importer: bulkHelper.getMiddleware(params.model, handlerOption.url),
                     filter: handlerOption.filter,
@@ -96,14 +128,17 @@ var withApp = function (app, apiOptions) {
             let fnArray = []
             fnArray.push(requestHelper.getMiddleware(apiOptions))
 
+            if (handlerOptions.permissions) {
+                fnArray.push((req, res, next) => {
+                    if (!req.context.hasPermission(handlerOptions.permissions)) {
+                        res.accessDenied()
+                    } else {
+                        next()
+                    }
+                })
+            }
             if (handlerOptions.filter) {
-                if (handlerOptions.filter instanceof Array) {
-                    handlerOptions.filter.forEach((filter) => {
-                        fnArray.push(filter)
-                    })
-                } else {
-                    fnArray.push(handlerOptions.filter)
-                }
+                fnArray.push(...extractMiddlewares(handlerOptions.filter))
             }
 
             if (handlerOptions.importer) {

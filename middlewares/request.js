@@ -55,7 +55,11 @@ const decorateResponse = (res, log) => {
         res.json(val)
     }
     res.accessDenied = (error, message) => {
-        res.status(error.status || 400)
+        let errorStatus = 400
+        if (error && error.status) {
+            errorStatus = error.status
+        }
+        res.status(errorStatus)
         let val = {
             isSuccess: false,
             message: message || 'Insufficient Permission',
@@ -121,6 +125,7 @@ const decorateResponse = (res, log) => {
 
 const getContext = async (req, log, builder) => {
     let claims = claimsParser.parse(req, log)
+
     const context = builder ? await builder(claims, log) : claims
 
     context.permissions = context.permissions || []
