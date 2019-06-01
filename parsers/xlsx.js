@@ -80,7 +80,7 @@ const extractHeaders = (sheet, config) => {
 
     let headers = []
 
-    for (let col = 0;; col++) {
+    for (let col = 0; ; col++) {
         let cell = getCell(sheet, headerRow, col)
         if (!cell || cell.t === 'z' || !cell.v || cell.v === '') {
             break
@@ -104,7 +104,7 @@ const extractHeaders = (sheet, config) => {
         headers.push(header)
     }
 
-    let columnMap = [];
+    let columnMap = []
     for (let map of config.columnMap) {
         let item = JSON.parse(JSON.stringify(map))
         item.type = map.type
@@ -176,11 +176,11 @@ exports.parse = (file, config) => {
         //     }
         //     return item
         // },
-        rows: async() => {
+        rows: async () => {
             let items = []
             let headerRow = config.headerRow || 0
             let keyCol = config.keyCol || 0
-            for (let index = headerRow + 1;; index++) {
+            for (let index = headerRow + 1; ; index++) {
                 let keyCell = getCell(excelSheet, index, keyCol)
                 if (!keyCell || keyCell.t === 'z') {
                     break

@@ -1,6 +1,6 @@
 {
     "name": "@open-age/express-api",
-    "version": "1.5.6",
+    "version": "1.6.0",
     "description": "a route helper to convert express to api",
     "main": "index.js",
     "scripts": {
@@ -27,7 +27,8 @@
         "formidable": "^1.2.1",
         "moment": "^2.22.2",
         "path-exists": "^3.0.0",
-        "xlsx": "^0.10.4"
+        "xlsx": "^0.10.4",
+        "uuid": "^3.1.0"
     },
     "author": "Sunny Parkash <sunny.parkash@gmail.com> (https://github.com/sunnyparkash)",
     "license": "WTFPL",
