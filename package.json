@@ -1,11 +1,13 @@
 {
     "name": "@open-age/express-api",
-    "version": "2.0.0",
+    "version": "2.0.2",
     "description": "a route helper to convert express to api",
     "main": "index.js",
     "scripts": {
         "test": "test",
-        "release:patch": "npm version patch",
+        "release:major": "npm version major && git push origin master && npm publish --access public",
+        "release:minor": "npm version minor && git push origin master && npm publish --access public",
+        "release:patch": "npm version patch && git push origin master && npm publish --access public",
         "publish": "npm publish --access public",
         "lint": "eslint * --fix"
     },

@@ -1,11 +1,9 @@
 
-const uuid = require('uuid')
-
 const fetch = (req, modelName, paramName) => {
     var value = req.query[`${modelName}-${paramName}`] || req.headers[`x-${modelName}-${paramName}`]
-    if (!value && req.body[modelName]) {
-        value = req.body[modelName][paramName]
-    }
+    // if (!value && req.body[modelName]) {
+    //     value = req.body[modelName][paramName]
+    // }
     if (!value) {
         return null
     }
@@ -17,7 +15,7 @@ const fetch = (req, modelName, paramName) => {
 
 exports.parse = (req, logger) => {
     let claims = {
-        id: fetch(req, 'context', 'id') || uuid.v1(),
+        id: fetch(req, 'context', 'id'),
         session: fetch(req, 'session', 'id'),
         role: fetch(req, 'role', 'key') || fetch(req, 'role', 'id'),
         organization: fetch(req, 'organization', 'code') || fetch(req, 'organization', 'id'),

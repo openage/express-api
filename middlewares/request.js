@@ -6,6 +6,8 @@ const logger = require('@open-age/logger')()
 const apiConfig = require('config').api || {}
 const claimsParser = require('../parsers/claims')
 
+const uuid = require('uuid')
+
 const decorateResponse = (res, log) => {
     res.success = (message, code, version) => {
         let val = {
@@ -126,14 +128,31 @@ const decorateResponse = (res, log) => {
 const getContext = async (req, log, builder) => {
     let claims = claimsParser.parse(req, log)
 
+    const isUser = (claims.role && claims.role.key) || (claims.session && claims.session.id)
+
     const context = builder ? await builder(claims, log) : claims
 
-    context.permissions = context.permissions || []
+    context.id = context.id || claims.id || uuid.v1()
 
     context.config = context.config || {
         timeZone: 'IST'
     }
-    if (context.role) {
+
+    let role = context.role
+
+    if (!role && context.user && context.user.role) {
+        role = context.user.role
+    }
+
+    context.permissions = context.permissions || []
+
+    if (isUser) {
+        context.permissions.push('user')
+    } else {
+        context.permissions.push('guest')
+    }
+
+    if (isUser) {
         if (context.organization) {
             context.permissions.push('organization.user')
         }
@@ -148,6 +167,31 @@ const getContext = async (req, log, builder) => {
 
         if (context.tenant) {
             context.permissions.push('tenant.guest')
+        }
+    }
+
+    context.logger = context.logger || log
+    context.logger.context = context.logger.context || {}
+    context.logger.context.id = context.id
+
+    if (context.organization) {
+        context.logger.context.organization = {
+            id: context.organization.id,
+            code: context.organization.code
+        }
+    }
+
+    if (context.tenant) {
+        context.logger.context.tenant = {
+            id: context.tenant.id,
+            code: context.tenant.code
+        }
+    }
+
+    if (context.role) {
+        context.logger.context.role = {
+            id: context.role.id,
+            code: context.role.code
         }
     }
 
