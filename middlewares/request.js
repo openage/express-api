@@ -108,12 +108,13 @@ const decorateResponse = (res, log) => {
 
         res.json(val)
     }
-    res.page = (items, pageSize, pageNo, total) => {
+    res.page = (items, pageSize, pageNo, total, stats) => {
         let val = {
             isSuccess: true,
             pageNo: pageNo || 1,
             items: items,
             pageSize: pageSize || items.length,
+            stats: stats,
             count: total,
             total: total || items.length || pageSize, // TODO: obsolete
             totalRecords: total // TODO: obsolete

@@ -165,7 +165,7 @@ var withApp = function (app, apiOptions) {
                             } else if (value instanceof Array) {
                                 res.page(value)
                             } else if (value.items) {
-                                res.page(value.items, value.pageSize, value.pageNo, value.total)
+                                res.page(value.items, value.pageSize, value.pageNo, value.total, value.stats)
                             } else {
                                 res.data(value)
                             }
