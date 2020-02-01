@@ -8,6 +8,48 @@ apiConfig.importers = apiConfig.importers || {}
 apiConfig.importers.dir = apiConfig.importers.dir || 'importers'
 apiConfig.importers.defaultFile = apiConfig.importers.defaultFile || 'default'
 
+const inflate = (flattened) => {
+    let model = {}
+
+    Object.getOwnPropertyNames(flattened).forEach(key => {
+        const value = flattened[key]
+
+        if (!value) {
+            return
+        }
+
+        let parts = key.split('-')
+        let index = 0
+        let obj = model
+
+        for (let part of parts) {
+            if (index === parts.length - 1) {
+                obj[part] = value
+            } else {
+                if (part.indexOf('[') > 0) {
+                    let arrayParts = part.split('[')
+                    part = arrayParts[0]
+                    obj[part] = obj[part] || []
+
+                    let array = obj[part]
+
+                    let arrayIndex = arrayParts[1].substring(0, arrayParts[1].length - 1)
+
+                    array[arrayIndex] = array[arrayIndex] || {}
+                    obj = array[arrayIndex]
+                } else {
+                    obj[part] = obj[part] || {}
+                    obj = obj[part]
+                }
+            }
+
+            index++
+        }
+    })
+
+    return model
+}
+
 const importViaConfig = async (req, file, handler) => {
     let type = 'csv'
     switch (file.type) {
@@ -28,7 +70,7 @@ const importViaConfig = async (req, file, handler) => {
     let rows = await require(`../parsers/${type}`).parse(file, config).rows()
 
     if (!config.modelMap) {
-        return rows
+        return rows.map(r => inflate(r))
     }
     const items = []
 

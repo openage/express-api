@@ -64,11 +64,27 @@ exports.parse = (file, config) => {
             return new Promise((resolve, reject) => {
                 csv.fromStream(stream, { headers: true, ignoreEmpty: true })
                     .on('data', (row) => {
-                        let item = {}
-                        for (let map of config.columnMap) {
-                            item[map.key] = getValue(row, map, config)
+                        if (config.columnMap) {
+                            let item = {}
+
+                            Object.getOwnPropertyNames(row).forEach(label => {
+                                let key = label.replace(' ', '-').toLowerCase()
+                                let map = config.columnMap.find(m =>
+                                    m.label.toLowerCase() === label.toLowerCase() ||
+                                    m.key.toLowerCase() === label.toLowerCase())
+                                if (map) {
+                                    item[map.key || key] = getValue(row, {
+                                        label: label,
+                                        type: map.type
+                                    }, config)
+                                } else {
+                                    item[key] = row[label]
+                                }
+                            })
+                            items.push(item)
+                        } else {
+                            items.push(row)
                         }
-                        items.push(item)
                     })
                     .on('end', () => {
                         return resolve(items)
