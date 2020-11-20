@@ -4,7 +4,7 @@ const requestHelper = require('./middlewares/request')
 const validationHelper = require('./middlewares/validation')
 const bulkHelper = require('./middlewares/bulk')
 
-const apiConfig = require('config').api || {}
+const apiConfig = JSON.parse(JSON.stringify(require('config').api || {}))
 
 apiConfig.dir = apiConfig.dir || 'api'
 apiConfig.root = apiConfig.root || 'api'
@@ -181,24 +181,24 @@ var withApp = function (app, apiOptions) {
             })
 
             switch (handlerOptions.action.toUpperCase()) {
-            case 'GET':
-                app.get(handlerOptions.url, fnArray)
-                break
+                case 'GET':
+                    app.get(handlerOptions.url, fnArray)
+                    break
 
-            case 'POST':
-                app.post(handlerOptions.url, fnArray)
-                break
+                case 'POST':
+                    app.post(handlerOptions.url, fnArray)
+                    break
 
-            case 'PUT':
-                app.put(handlerOptions.url, fnArray)
-                break
+                case 'PUT':
+                    app.put(handlerOptions.url, fnArray)
+                    break
 
-            case 'DELETE':
-                app.delete(handlerOptions.url, fnArray)
-                break
+                case 'DELETE':
+                    app.delete(handlerOptions.url, fnArray)
+                    break
 
-            default:
-                break
+                default:
+                    break
             }
         }
     }
