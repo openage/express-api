@@ -56,6 +56,9 @@ const importViaConfig = async (req, file, handler) => {
         case 'text/csv':
             type = 'csv'
             break
+        case 'application/vnd.ms-excel':
+            type = 'xlsx'
+            break
         case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
             type = 'xlsx'
             break
