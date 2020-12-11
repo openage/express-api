@@ -52,18 +52,20 @@ const inflate = (flattened) => {
 
 const importViaConfig = async (req, file, handler) => {
     let type = 'csv'
-    switch (file.type) {
-        case 'text/csv':
-            type = 'csv'
-            break
-        case 'application/vnd.ms-excel':
-            type = 'xlsx'
-            break
-        case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
-            type = 'xlsx'
-            break
-        default:
-            throw new Error(`file type '${file.type}' is not supported`)
+    if (file.type) {
+        switch (file.type) {
+            case 'text/csv':
+                type = 'csv'
+                break
+            case 'application/vnd.ms-excel':
+                type = 'xlsx'
+                break
+            case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+                type = 'xlsx'
+                break
+            default:
+                throw new Error(`file type '${file.type}' is not supported`)
+        }
     }
 
     const format = req.query['format'] || apiConfig.importers.defaultFile
@@ -72,13 +74,15 @@ const importViaConfig = async (req, file, handler) => {
 
     let rows = await require(`../parsers/${type}`).parse(file, config).rows()
 
+    rows = rows.map(r => inflate(r))
+
     if (!config.modelMap) {
-        return rows.map(r => inflate(r))
+        return rows
     }
     const items = []
 
     for (const row of rows) {
-        let mappedItem = config.modelMap(row, config, req)
+        let mappedItem = await config.modelMap(row, config, req)
         if (!mappedItem) {
             continue
         }
