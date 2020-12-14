@@ -2,9 +2,14 @@ const csv = require('fast-csv')
 const fs = require('fs')
 const moment = require('moment')
 
-const toDate = (value, timeZone) => {
+const toDate = (value, map, config) => {
+    if (map.format) {
+        if (moment(value, map.format).isValid()) {
+            return moment(value, map.format).toDate()
+        }
+    }
     if (!value.endsWith('Z')) {
-        value = `${value} ${timeZone}`
+        value = `${value} ${config.timeZone}`
     }
     let date
 
@@ -17,25 +22,24 @@ const toDate = (value, timeZone) => {
     return date
 }
 
-let getValue = (row, header, config) => {
-    let value = row[header.label]
+let getValue = (value, map, row, config) => {
 
     let type = 'string'
 
-    if (header.type) {
-        type = (header.type.name || header.type).toLowerCase()
+    if (map.type) {
+        type = (map.type.name || map.type).toLowerCase()
     }
 
     switch (type) {
-    case 'number':
-        if (!value) {
-            value = undefined
-        } else if (value.indexOf('.') !== -1) {
-            value = parseFloat(value)
-        } else {
-            value = parseInt(value)
-        }
-        break
+        case 'number':
+            if (!value) {
+                value = undefined
+            } else if (value.indexOf('.') !== -1) {
+                value = parseFloat(value)
+            } else {
+                value = parseInt(value)
+            }
+            break
         // case 'boolean':
         //     if (typeof cell.v === 'boolean') {
         //         value = cell.v
@@ -43,14 +47,14 @@ let getValue = (row, header, config) => {
         //         value = !!cell.w
         //     }
         //     break
-    case 'date':
-        value = value ? toDate(value, config.timeZone) : undefined
-        break
-    case 'string':
-        value = value === undefined ? undefined : '' + value
-        break
-    default:
-        break
+        case 'date':
+            value = value ? toDate(value, map, config) : undefined
+            break
+        case 'string':
+            value = value === undefined ? undefined : '' + value
+            break
+        default:
+            break
     }
     return value
 }
@@ -67,20 +71,56 @@ exports.parse = (file, config) => {
                         if (config.columnMap) {
                             let item = {}
 
-                            Object.getOwnPropertyNames(row).forEach(label => {
-                                let key = label.replace(' ', '-').toLowerCase()
-                                let map = config.columnMap.find(m =>
-                                    m.label.toLowerCase() === label.toLowerCase() ||
-                                    m.key.toLowerCase() === label.toLowerCase())
-                                if (map) {
-                                    item[map.key || key] = getValue(row, {
-                                        label: label,
-                                        type: map.type
-                                    }, config)
-                                } else {
-                                    item[key] = row[label]
-                                }
+                            let labels = {}
+
+                            Object.getOwnPropertyNames(row).forEach(l => {
+                                labels[l.trim().toLowerCase()] = l
                             })
+
+                            for (const map of config.columnMap) {
+                                let value
+                                if (map.label) {
+                                    let label = labels[map.label.trim().toLowerCase()]
+                                    value = row[label]
+                                    if (value && map.empty && map.empty === value) {
+                                        value = undefined
+                                    }
+                                }
+
+                                if (!value) {
+                                    if (map.value) {
+                                        value = map.value
+                                    } else if (map.values) {
+                                        value = (map.values.find(v => {
+
+                                            let result = true
+                                            for (const condition of (v.conditions || [])) {
+                                                switch (condition.operator) {
+                                                    case '!!':
+                                                        result = result && (!!item[condition.key] === condition.value)
+                                                        break
+                                                    case '==':
+                                                    case '===':
+                                                        result = result && (item[condition.key] === condition.value)
+                                                        break
+                                                    case '>':
+                                                        result = result && (item[condition.key] > condition.value)
+                                                        break
+                                                    case '<':
+                                                        result = result && (item[condition.key] < condition.value)
+                                                        break
+                                                }
+                                            }
+
+                                            return result
+
+                                        }) || {}).value
+                                    }
+                                }
+
+                                item[map.key] = getValue(value, map, row, config)
+                            }
+
                             items.push(item)
                         } else {
                             items.push(row)
