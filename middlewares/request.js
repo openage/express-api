@@ -4,6 +4,7 @@ const appRoot = require('app-root-path')
 const logger = require('@open-age/logger')()
 
 const apiConfig = require('config').api || {}
+const authConfig = require('config').auth || { provider: 'directory' }
 const claimsParser = require('../parsers/claims')
 
 const uuid = require('uuid')
@@ -126,14 +127,26 @@ const decorateResponse = (res, log) => {
     }
 }
 
-const getContext = async (req, log, builder) => {
-    let claims = claimsParser.parse(req, log)
+const getContext = async (req, log, options) => {
+    let claims = await claimsParser.parse(req, log)
+
+    claims.id = claims.id || uuid.v1()
 
     const isUser = (claims.role && claims.role.key) || (claims.session && claims.session.id)
 
-    const context = builder ? await builder(claims, log) : claims
+    if (options.auth && claims.role && claims.role.key) {
+        claims.user = await options.auth({
+            role: claims.role
+        }, {
+            id: claims.id,
+            meta: claims.meta,
+            logger: log
+        })
+    }
 
-    context.id = context.id || claims.id || uuid.v1()
+    const context = options.builder ? await options.builder(claims, log) : claims
+
+    context.id = context.id || claims.id
 
     context.config = context.config || {
         timeZone: 'IST'
@@ -228,13 +241,24 @@ const getContext = async (req, log, builder) => {
 
     return context
 }
+
 exports.getMiddleware = (apiOptions) => {
-    let builder
+
+    const contextOptions = {
+        builder: null,
+        auth: null
+    }
 
     if (apiOptions && apiOptions.context && apiOptions.context.builder) {
-        builder = apiOptions.context.builder
+        contextOptions.builder = apiOptions.context.builder
     } else if (apiConfig && apiConfig.context && apiConfig.context.builder) {
-        builder = require(`${appRoot}/${apiConfig.context.builder}`).create
+        contextOptions.builder = require(`${appRoot}/${apiConfig.context.builder}`).create
+    }
+
+    if (apiOptions && apiOptions.users && apiOptions.users.get) {
+        contextOptions.auth = apiOptions.users.get
+    } else if (authConfig && authConfig.users) {
+        contextOptions.auth = require(`${appRoot}/${authConfig.users}`).get
     }
 
     return (req, res, next) => {
@@ -246,22 +270,31 @@ exports.getMiddleware = (apiOptions) => {
             log.debug(req.body)
         }
 
-        getContext(req, log, builder).then(context => {
+        getContext(req, log, contextOptions).then(context => {
+            context.url = req.url
             req.context = context
             decorateResponse(res, log)
             next()
         }).catch(err => {
             let error = err
-            let message = err.message
-            if ('errors' in apiConfig) {
-                error = 'UNKOWN'
-                message = 'Internal Server Error'
+            let errorStatus = 500
+            if (error && error.status) {
+                errorStatus = error.status
             }
+            res.status(errorStatus)
+
+            error.code = error.code || error.message
+
+            if (errorStatus === 500 && 'errors' in apiConfig) {
+                error.code = 'UNKNOWN'
+                error.message = 'Internal Server Error'
+            }
+
             res.json({
                 isSuccess: false,
-                message: message,
+                message: error.message,
                 error: error,
-                code: 'UNKNOWN'
+                code: error.code
             })
         })
     }
