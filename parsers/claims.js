@@ -50,7 +50,9 @@ const strategy = {
             }
         }
 
-        return {}
+        return {
+            role: fetch(req, 'role', 'key') || fetch(req, 'role', 'id'),
+        }
     },
     directory: (req) => {
         return {
