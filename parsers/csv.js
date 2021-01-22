@@ -17,6 +17,8 @@ const toDate = (value, map, config) => {
         date = moment(value, 'DD-MM-YYYY').toDate()
     } else if (moment(value, 'YYYY-MM-DD').isValid()) {
         date = moment(value, 'YYYY-MM-DD').toDate()
+    } else if (moment(value, 'DD/MM/YY').isValid()) {
+        date = moment(value, 'DD/MM/YY').toDate()
     }
 
     return date

@@ -37,37 +37,42 @@ let getValue = (cell, header, config) => {
     }
 
     switch (type) {
-    case 'number':
-        if (typeof cell.v === 'number') {
-            value = cell.v
-        } else if (!value) {
-            value = undefined
-        } else if (value.indexOf('.') !== -1) {
-            value = parseFloat(value)
-        } else {
-            value = parseInt(value)
-        }
-        break
-    case 'boolean':
-        if (typeof cell.v === 'boolean') {
-            value = cell.v
-        } else {
-            value = !!cell.w
-        }
-        break
-    case 'date':
-        value = cell.w ? toDate(cell.w, config.timeZone) : undefined
-        break
-    case 'string':
-        value = '' + cell.v
-        break
-    default:
-        break
+        case 'number':
+            if (typeof cell.v === 'number') {
+                value = cell.v
+            } else if (!value) {
+                value = undefined
+            } else if (value.indexOf('.') !== -1) {
+                value = parseFloat(value)
+            } else {
+                value = parseInt(value)
+            }
+            break
+        case 'boolean':
+            if (typeof cell.v === 'boolean') {
+                value = cell.v
+            } else {
+                value = !!cell.w
+            }
+            break
+        case 'date':
+            value = cell.w ? toDate(cell.w, config.timeZone) : undefined
+            break
+        case 'string':
+            value = '' + cell.v
+            break
+        default:
+            break
     }
     return value
 }
 
-const cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'AA', 'AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AH', 'AI', 'AJ', 'AK', 'AL', 'AM', 'AN', 'AO', 'AP', 'AQ', 'AR', 'AS', 'AT', 'AU', 'AV', 'AW', 'AX', 'AY', 'AZ']
+const cols = [
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+    'AA', 'AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AH', 'AI', 'AJ', 'AK', 'AL', 'AM', 'AN', 'AO', 'AP', 'AQ', 'AR', 'AS', 'AT', 'AU', 'AV', 'AW', 'AX', 'AY', 'AZ',
+    'BA', 'BB', 'BC', 'BD', 'BE', 'BF', 'BG', 'BH', 'BI', 'BJ', 'BK', 'BL', 'BM', 'BN', 'BO', 'BP', 'BQ', 'BR', 'BS', 'BT', 'BU', 'BV', 'BW', 'BX', 'BY', 'BZ',
+    'CA', 'CB', 'CC', 'CD', 'CE', 'CF', 'CG', 'CH', 'CI', 'CJ', 'CK', 'CL', 'CM', 'CN', 'CO', 'CP', 'CQ', 'CR', 'CS', 'CT', 'CU', 'CV', 'CW', 'CX', 'CY', 'CZ'
+]
 
 let getCell = (excelSheet, row, column) => {
     let cellName = cols[column] + (row + 1)
@@ -91,15 +96,15 @@ const extractHeaders = (sheet, config) => {
         }
 
         switch (cell.t) {
-        case 's':
-            header.label = cell.v
-            break
-        case 'd':
-            header.label = dateToString(cell.d)
-            break
-        case 'n':
-            header.label = `${cell.n}`
-            break
+            case 's':
+                header.label = cell.v
+                break
+            case 'd':
+                header.label = dateToString(cell.d)
+                break
+            case 'n':
+                header.label = `${cell.n}`
+                break
         }
         headers.push(header)
     }
@@ -131,12 +136,12 @@ const extractHeaders = (sheet, config) => {
             }
 
             switch (headerType) {
-            case 'string':
-                map.key = '' + cell.v
-                break
-            case 'date':
-                map.key = dateToString(cell.w)
-                break
+                case 'string':
+                    map.key = '' + cell.v
+                    break
+                case 'date':
+                    map.key = dateToString(cell.w)
+                    break
             }
         }
     }

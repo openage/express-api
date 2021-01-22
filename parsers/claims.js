@@ -59,7 +59,6 @@ const strategy = {
             role: fetch(req, 'role', 'key') || fetch(req, 'role', 'id'),
         }
     }
-
 }
 
 const fetch = (req, modelName, paramName) => {
