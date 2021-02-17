@@ -64,7 +64,9 @@ const importViaConfig = async (req, file, handler) => {
                 type = 'xlsx'
                 break
             default:
-                throw new Error(`file type '${file.type}' is not supported`)
+                if (file.name.indexOf('.csv') === -1) {
+                    throw new Error(`file type '${file.type}' is not supported`)
+                }
         }
     }
 
@@ -76,21 +78,36 @@ const importViaConfig = async (req, file, handler) => {
 
     rows = rows.map(r => inflate(r))
 
+    let rowIndex = 0
     if (!config.modelMap) {
+        rows.forEach(e => {
+            e._row = {
+                index: rowIndex++,
+                data: row
+            }
+        })
         return rows
     }
     const items = []
 
     for (const row of rows) {
+        rowIndex++;
         let mappedItem = await config.modelMap(row, config, req)
         if (!mappedItem) {
             continue
         }
-
         if (!Array.isArray(mappedItem)) {
+            mappedItem._row = {
+                index: rowIndex,
+                data: row
+            }
             items.push(mappedItem)
         } else if (mappedItem.length) {
             mappedItem.forEach(item => {
+                item._row = {
+                    index: rowIndex,
+                    data: row
+                }
                 items.push(item)
             })
         }
@@ -158,18 +175,18 @@ exports.getMiddleware = (apiName, action) => {
 
             let handler = require(handlerFile)
 
-            let handerPromise
+            let handlerPromise
 
             if (handler.config) {
-                handerPromise = importViaConfig(req, file, handler)
+                handlerPromise = importViaConfig(req, file, handler)
             } else if (handler.import) {
-                handerPromise = handler.import(req, file, format, ext)
+                handlerPromise = handler.import(req, file, format, ext)
             } else {
                 logger.error(`importer '${handlerFile}' does not implement import `)
                 return next()
             }
 
-            return handerPromise.then(items => {
+            return handlerPromise.then(items => {
                 req.body.items = items
                 logger.end()
                 next()
