@@ -3,11 +3,9 @@ const appRoot = require('app-root-path')
 
 const logger = require('@open-age/logger')()
 
-const apiConfig = require('config').api || {}
-const authConfig = require('config').auth || { provider: 'directory' }
-const claimsParser = require('../parsers/claims')
+const apiConfig = JSON.parse(JSON.stringify(require('config').api || {}))
+const auth = require('../auth')
 
-const uuid = require('uuid')
 
 const decorateResponse = (res, log) => {
     res.success = (message, code, version) => {
@@ -128,9 +126,7 @@ const decorateResponse = (res, log) => {
 }
 
 const getContext = async (req, log, options) => {
-    let claims = await claimsParser.parse(req, log)
-
-    claims.id = claims.id || uuid.v1()
+    let claims = await auth.claims(req, log)
 
     const isUser = (claims.role && claims.role.key) || (claims.session && claims.session.id)
 
@@ -257,8 +253,6 @@ exports.getMiddleware = (apiOptions) => {
 
     if (apiOptions && apiOptions.users && apiOptions.users.get) {
         contextOptions.auth = apiOptions.users.get
-    } else if (authConfig && authConfig.users) {
-        contextOptions.auth = require(`${appRoot}/${authConfig.users}`).get
     }
 
     return (req, res, next) => {
