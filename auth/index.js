@@ -14,7 +14,7 @@ const getProvider = () => {
 const provider = getProvider()
 
 exports.claims = async (req, logger) => {
-    const claims = provider.extract(req, logger)
+    const claims = await provider.extract(req, logger)
 
     claims.id = claims.id || uuid.v1()
 

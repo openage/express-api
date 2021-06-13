@@ -1,18 +1,20 @@
 const crypto = require('crypto')
 const moment = require('moment')
 
+const jwt = require('jsonwebtoken')
+
 const auth = JSON.parse(JSON.stringify(require('config').get('auth') || {
     provider: 'directory'
 }))
 
-const config = auth.options || {}
+auth.config = auth.config || {}
 
-config.validate = config.validate || {}
+auth.config.validate = auth.config.validate || {}
 
-
-const decrypt = (hash) => {
-    var decipher = crypto.createDecipher(config.algorithm || 'aes-256-ctr', authConfig.secret)
-    return decipher.update(hash, 'hex', 'utf8') + decipher.final('utf8')
+const parse = (token) => {
+    return jwt.decode(token, auth.config.secret, {
+        expiresIn: auth.config.expiresIn || 1440
+    })
 }
 
 const fetch = (req, modelName, paramName) => {
@@ -44,7 +46,9 @@ exports.extract = async (req, logger) => {
 
     // if token exists overwrite the claims from token
 
-    let token = req.headers['authorization'] || fetch(req, 'access', 'token') || req.query['access_token']
+    let access = fetch(req, 'access', 'token') || {}
+
+    let token = req.headers['authorization'] || access.token || req.query['access_token']
 
     if (!token) {
         return claims
@@ -56,20 +60,20 @@ exports.extract = async (req, logger) => {
 
     let data
     try {
-        data = JSON.parse(decrypt(token))
+        data = parse(token)
     } catch (error) {
         error = new Error('INVALID_TOKEN')
         error.status = 401
         throw error
     }
 
-    if (config.validate.ip && data.ip !== req.ip) {
+    if (auth.config.validate.ip && data.ip !== req.ip) {
         error = new Error('INVALID_DEVICE')
         error.status = 403
         throw error
     }
 
-    if (config.validate.expiry && moment() > moment(data.expiry)) {
+    if (auth.config.validate.expiry && moment() > moment(data.expiry)) {
         error = new Error('SESSION_EXPIRED')
         error.status = 403
         throw error

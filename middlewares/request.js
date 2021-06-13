@@ -3,7 +3,7 @@ const appRoot = require('app-root-path')
 
 const logger = require('@open-age/logger')()
 
-const apiConfig = JSON.parse(JSON.stringify(require('config').api)) || {}
+const apiConfig = JSON.parse(JSON.stringify(require('config').api || {}))
 const auth = require('../auth')
 
 
