@@ -83,7 +83,7 @@ const importViaConfig = async (req, file, handler) => {
         rows.forEach(e => {
             e._row = {
                 index: rowIndex++,
-                data: row
+                data: e
             }
         })
         return rows
