@@ -73,6 +73,10 @@ const importViaConfig = async (req, file, handler) => {
     const format = req.query['format'] || apiConfig.importers.defaultFile
 
     let config = await handler.config(req, { format: format, type: type })
+    
+    if (config.preProcessor) {
+        file = await require(`../helpers/${config.preProcessor.handler}`).run(file, config.preProcessor.config, req.context)
+    }
 
     let rows = await require(`../parsers/${type}`).parse(file, config).rows()
 
