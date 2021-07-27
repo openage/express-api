@@ -1,4 +1,3 @@
-// var process = require('child_process')
 const { spawn } = require('child_process')
 const scriptsFolder = require('config').get('folders.scripts')
 const tempFolder = require('config').get('folders.temp')
@@ -27,27 +26,21 @@ const inject = (item, data) => {
 
 exports.run = async (file, config, context) => {
 
-    // let data = task.data.target.
-    cmd = config.cmd || ''
-    if (cmd) {
-        cmd = inject(cmd, {})
+    let injectable = {
+        file: file
     }
 
-    params = config.params || []
-    params = params.map((param) => {
-        param = inject(param, {})
-        return param
-    })
+    const cmd = inject(config.cmd || '', injectable)
 
-    source = config.source || '';
+    const params = (config.params || []).map((param) => inject(param, injectable))
+
+    const source = inject(config.source || '', injectable)
     if (source) {
-        source = inject(source, { file })
         params.push(source)
     }
 
-    target = config.target || '';
+    const target = inject(config.target || '', injectable)
     if (target) {
-        target = inject(target, {});
         params.push(target)
     }
 
@@ -56,23 +49,11 @@ exports.run = async (file, config, context) => {
     const logger = context.logger.start('shell')
 
     return new Promise((resolve, reject) => {
-        // let result = process.execSync(cmd, options)
-
         let errored = false
 
         options.stdio = 'inherit'
 
         const child = spawn(cmd, params, options)
-        // child.stdout.setEncoding('utf8')
-        // child.stderr.setEncoding('utf8')
-
-        // child.stdout.on('data', data => {
-        //     logger.debug(data)
-        // })
-
-        // child.stderr.on('data', data => {
-        //     logger.debug(data.toString())
-        // })
 
         child.on('error', (error) => {
             logger.error(error)
