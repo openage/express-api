@@ -239,7 +239,9 @@ const getContext = async (req, log, options) => {
             let value
             if (context.config) {
                 value = getValue(identifier, context.config)
-                return value === undefined ? defaultValue : value
+                if (value) {
+                    return value
+                }
             }
 
             if (context.user && context.user.config) {
