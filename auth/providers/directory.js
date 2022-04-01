@@ -54,7 +54,7 @@ exports.extract = async (req, logger) => {
         return claims
     }
 
-    if (token.startsWith('Bearer ')) {
+    if (token.startsWith('Bearer ') || token.startsWith('bearer ')) {
         token = token.substr(7)
     }
 
@@ -85,6 +85,10 @@ exports.extract = async (req, logger) => {
         if (context) {
             data.contextId = context.id
         }
+    }
+
+    if (data.type || data.type == "impersonate") {
+        claims.impersonating = true
     }
 
     if (data.contextId) {

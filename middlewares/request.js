@@ -4,6 +4,7 @@ const appRoot = require('app-root-path')
 const logger = require('@open-age/logger')()
 
 const apiConfig = JSON.parse(JSON.stringify(require('config').api || {}))
+const serviceConfig = JSON.parse(JSON.stringify(require('config').service || {}))
 const auth = require('../auth')
 
 
@@ -125,6 +126,19 @@ const decorateResponse = (res, log) => {
     }
 }
 
+const getValue = (identifier, value) => {
+    let keys = identifier.split('.')
+
+    for (let key of keys) {
+        if (!value[key]) {
+            return
+        }
+        value = value[key]
+    }
+
+    return value
+}
+
 const getContext = async (req, log, options) => {
     let claims = await auth.claims(req, log)
 
@@ -143,6 +157,7 @@ const getContext = async (req, log, options) => {
     const context = options.builder ? await options.builder(claims, log) : claims
 
     context.id = context.id || claims.id
+    context.impersonating = claims.impersonating
 
     context.config = context.config || {
         timeZone: 'IST'
@@ -221,17 +236,35 @@ const getContext = async (req, log, options) => {
 
     if (!context.getConfig) {
         context.getConfig = (identifier, defaultValue) => {
-            var keys = identifier.split('.')
-            var value = context.config
-
-            for (var key of keys) {
-                if (!value[key]) {
-                    return defaultValue
-                }
-                value = value[key]
+            let value
+            if (context.config) {
+                value = getValue(identifier, context.config)
+                return value === undefined ? defaultValue : value
             }
 
-            return value
+            if (context.user && context.user.config) {
+                value = getValue(identifier, context.user.config)
+                if (value) {
+                    return value
+                }
+            }
+
+            if (context.organization && context.organization.config) {
+                value = getValue(identifier, context.organization.config)
+                if (value) {
+                    return value
+                }
+            }
+
+            if (context.tenant && context.tenant.config) {
+                value = getValue(identifier, context.tenant.config)
+                if (value) {
+                    return value
+                }
+            }
+
+            value = getValue(identifier, serviceConfig)
+            return value === undefined ? defaultValue : value
         }
     }
 
