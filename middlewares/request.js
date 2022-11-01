@@ -8,6 +8,19 @@ const serviceConfig = JSON.parse(JSON.stringify(require('config').service || {})
 const auth = require('../auth')
 
 
+const remap = (item, context) => {
+    if (context.include && context.include.length) {
+        // TODO: remap
+    }
+
+    if (context.exculde && context.include.length) {
+        // TODO: remap
+    }
+
+    return item
+}
+
+
 const decorateResponse = (res, log) => {
     res.success = (message, code, version) => {
         let val = {
@@ -99,6 +112,9 @@ const decorateResponse = (res, log) => {
             data: item,
             code: code
         }
+
+        val.data = remap(data, context)
+
         log.silly(message || 'success', val)
         log.end()
 
@@ -119,6 +135,8 @@ const decorateResponse = (res, log) => {
             total: total || items.length || pageSize, // TODO: obsolete
             totalRecords: total // TODO: obsolete
         }
+
+        val.items = va.items.map(i => remap(i, context))
 
         log.silly('page', val)
         log.end()
