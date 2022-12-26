@@ -3,6 +3,7 @@ const appRoot = require('app-root-path')
 const requestHelper = require('./middlewares/request')
 const validationHelper = require('./middlewares/validation')
 const bulkHelper = require('./middlewares/bulk')
+const fieldsHelper = require('./helpers/fields')
 
 const apiConfig = JSON.parse(JSON.stringify(require('config').api || {}))
 
@@ -167,7 +168,7 @@ var withApp = function (app, apiOptions) {
                             } else if (value.items) {
                                 res.page(value.items, value.pageSize, value.pageNo, value.total, value.stats)
                             } else {
-                                res.data(value)
+                                res.data(fieldsHelper.trim(value, req.context))
                             }
                         }).catch(err => {
                             logger.end()

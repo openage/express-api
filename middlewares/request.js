@@ -235,6 +235,16 @@ const getContext = async (req, log, options) => {
         }
     }
 
+    context.include = req.query && req.query.include ? req.query.include : []
+    context.exclude = req.query && req.query.exclude ? req.query.exclude : []
+
+    if (context.exclude && typeof context.exclude === 'string') {
+        context.exclude = context.exclude.split(',')
+    }
+    if (context.include && typeof context.include === 'string') {
+        context.include = context.include.split(',')
+    }
+
     return context
 }
 
