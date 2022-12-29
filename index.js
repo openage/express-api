@@ -152,7 +152,16 @@ var withApp = function (app, apiOptions) {
             fnArray.push((req, res) => {
                 let logger = req.context.logger.start('api')
                 try {
-                    let retVal = handlerOptions.method(req, res)
+                    let retVal
+                    // let cache = require(dynamically get cache provider)
+                    // let retVal
+                    // if(handlerOptions.cache){
+                    //    retVal = cache.get(`${req.context.service}${req.originalUrl}`) 
+                    // }
+                    if(!retVal){
+
+                    }
+                    retVal = handlerOptions.method(req, res)
 
                     if (retVal && retVal.then && typeof retVal.then === 'function') {
                         return retVal.then(value => {
