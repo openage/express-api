@@ -174,6 +174,9 @@ var withApp = function (app, apiOptions) {
                             if (res.finished || value === undefined) {
                                 return
                             }
+                            // if(handlerOptions.invalidateCache){
+                            //    cache.remove(`${req.context.service}${req.originalUrl}`) 
+                            // }
                             // if(handlerOptions.cache && !fetchedFromCache){
                             //    cache.set(`${req.context.service}${req.originalUrl}`,retVal) 
                             // }
