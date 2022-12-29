@@ -76,6 +76,8 @@ module.exports = function (app, apiOptions) {
                     importer: bulkHelper.getMiddleware(params.model, handlerOption.url),
                     filter: handlerOption.filter,
                     method: method
+                    // cache: handlerOption.cache,
+                    // invalidateCache: handlerOption.invalidateCache
                 }
 
                 return val
