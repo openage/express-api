@@ -153,15 +153,18 @@ var withApp = function (app, apiOptions) {
                 let logger = req.context.logger.start('api')
                 try {
                     let retVal
+                    //let fetchedFromCache = false
                     // let cache = require(dynamically get cache provider)
                     // let retVal
                     // if(handlerOptions.cache){
                     //    retVal = cache.get(`${req.context.service}${req.originalUrl}`) 
+                    //    if(retVal){
+                            //fetchedFromCache = true
+                        //}
                     // }
-                    if(!retVal){
-
+                    if (!retVal) {
+                        retVal = handlerOptions.method(req, res)
                     }
-                    retVal = handlerOptions.method(req, res)
 
                     if (retVal && retVal.then && typeof retVal.then === 'function') {
                         return retVal.then(value => {
@@ -169,6 +172,9 @@ var withApp = function (app, apiOptions) {
                             if (res.finished || value === undefined) {
                                 return
                             }
+                            // if(handlerOptions.cache && !fetchedFromCache){
+                            //    cache.set(`${req.context.service}${req.originalUrl}`,retVal) 
+                            // }
                             if (typeof value === 'string' || value === null) {
                                 res.success(value)
                             } else if (value instanceof Array) {
