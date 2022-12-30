@@ -7,7 +7,8 @@ const apiConfig = JSON.parse(JSON.stringify(require('config').api || {}))
 const auth = require('../auth')
 
 
-const decorateResponse = (res, log) => {
+
+const decorateResponse = (res, context, log) => {
     res.success = (message, code, version) => {
         let val = {
             isSuccess: true,
@@ -105,6 +106,9 @@ const decorateResponse = (res, log) => {
             res.set('Last-Modified', moment(item.timeStamp).toISOString())
         }
 
+        // TODO cache here
+        context.cache.set('request', val)
+
         res.json(val)
     }
     res.page = (items, pageSize, pageNo, total, stats) => {
@@ -121,6 +125,10 @@ const decorateResponse = (res, log) => {
 
         log.silly('page', val)
         log.end()
+
+        // TODO Cache here
+
+        context.cache.set('request', val)
         res.json(val)
     }
 }
@@ -235,6 +243,8 @@ const getContext = async (req, log, options) => {
         }
     }
 
+    context.cache = cache.extend(context)
+
     return context
 }
 
@@ -267,7 +277,7 @@ exports.getMiddleware = (apiOptions) => {
         getContext(req, log, contextOptions).then(context => {
             context.url = req.url
             req.context = context
-            decorateResponse(res, log)
+            decorateResponse(res, context, log)
             next()
         }).catch(err => {
             let error = err

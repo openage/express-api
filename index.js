@@ -151,6 +151,10 @@ var withApp = function (app, apiOptions) {
                 fnArray.push(handlerOptions.validator)
             }
 
+            if (handlerOptions.cache) {
+                fnArray.push(handlerOptions.cache)
+            }
+
             fnArray.push((req, res) => {
                 let logger = req.context.logger.start('api')
                 try {
@@ -159,10 +163,10 @@ var withApp = function (app, apiOptions) {
                     // let cache = require(dynamically get cache provider)
                     // let retVal
                     // if(handlerOptions.cache){
-                    //    retVal = cache.get(`${req.context.service}${req.originalUrl}`) 
+                    //    retVal = cache.get(`${req.context.service}:${req.originalUrl}`) 
                     //    if(retVal){
-                            //fetchedFromCache = true
-                        //}
+                    //fetchedFromCache = true
+                    //}
                     // }
                     if (!retVal) {
                         retVal = handlerOptions.method(req, res)
@@ -202,6 +206,7 @@ var withApp = function (app, apiOptions) {
 
             switch (handlerOptions.action.toUpperCase()) {
                 case 'GET':
+
                     app.get(handlerOptions.url, fnArray)
                     break
 
