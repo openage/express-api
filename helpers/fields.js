@@ -1,5 +1,5 @@
 exports.trim = (data, context) => {
-    if (!context || !(context.exclude || context.include)) {
+    if (!data || !context || !(context.exclude || context.include)) {
         return data
     }
 
@@ -16,5 +16,5 @@ exports.trim = (data, context) => {
         }
     }
     
-    return val
+    return Object.keys(val).length ? val : data
 }
