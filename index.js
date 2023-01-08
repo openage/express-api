@@ -168,7 +168,7 @@ var withApp = function (app, apiOptions) {
                             } else if (value.items) {
                                 res.page(value.items, value.pageSize, value.pageNo, value.total, value.stats)
                             } else {
-                                res.data(fieldsHelper.trim(value, req.context))
+                                res.data(value)
                             }
                         }).catch(err => {
                             logger.end()
