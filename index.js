@@ -3,7 +3,6 @@ const appRoot = require('app-root-path')
 const requestHelper = require('./middlewares/request')
 const validationHelper = require('./middlewares/validation')
 const bulkHelper = require('./middlewares/bulk')
-const fieldsHelper = require('./helpers/fields')
 
 const apiConfig = JSON.parse(JSON.stringify(require('config').api || {}))
 
