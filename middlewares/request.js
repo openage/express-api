@@ -6,9 +6,10 @@ const logger = require('@open-age/logger')()
 const apiConfig = JSON.parse(JSON.stringify(require('config').api || {}))
 const serviceConfig = JSON.parse(JSON.stringify(require('config').service || {}))
 const auth = require('../auth')
+const fieldHelper = require('../helpers/fields')
 
 
-const decorateResponse = (res, log) => {
+const decorateResponse = (res, context, log) => {
     res.success = (message, code, version) => {
         let val = {
             isSuccess: true,
@@ -96,7 +97,7 @@ const decorateResponse = (res, log) => {
         let val = {
             isSuccess: true,
             message: message,
-            data: item,
+            data: item ? fieldHelper.trim(item, context) : item,
             code: code
         }
         log.silly(message || 'success', val)
@@ -112,7 +113,7 @@ const decorateResponse = (res, log) => {
         let val = {
             isSuccess: true,
             pageNo: pageNo || 1,
-            items: items,
+            items: (items || []).map(i => fieldHelper.trim(i, context)),
             pageSize: pageSize || items.length,
             stats: stats,
             count: total,
@@ -270,6 +271,16 @@ const getContext = async (req, log, options) => {
         }
     }
 
+    context.include = req.query && req.query.include ? req.query.include : []
+    context.exclude = req.query && req.query.exclude ? req.query.exclude : []
+
+    if (context.exclude && typeof context.exclude === 'string') {
+        context.exclude = context.exclude.split(',')
+    }
+    if (context.include && typeof context.include === 'string') {
+        context.include = context.include.split(',')
+    }
+
     return context
 }
 
@@ -302,7 +313,7 @@ exports.getMiddleware = (apiOptions) => {
         getContext(req, log, contextOptions).then(context => {
             context.url = req.url
             req.context = context
-            decorateResponse(res, log)
+            decorateResponse(res, context, log)
             next()
         }).catch(err => {
             let error = err
