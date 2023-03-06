@@ -75,9 +75,9 @@ module.exports = function (app, apiOptions) {
                     validator: validationHelper.getMiddlware(params.model, methodName),
                     importer: bulkHelper.getMiddleware(params.model, handlerOption.url),
                     filter: handlerOption.filter,
-                    method: method
-                    // cache: handlerOption.cache,
-                    // invalidateCache: handlerOption.invalidateCache
+                    method: method,
+                    cache: handlerOption.cache,
+                    invalidateCache: handlerOption.invalidateCache
                 }
 
                 return val
@@ -124,6 +124,8 @@ module.exports = function (app, apiOptions) {
 var withApp = function (app, apiOptions) {
     return {
         register: function (handlerOptions) {
+            let fetchedFromCache = false
+            let retVal
             if (!handlerOptions.method) {
                 return // the method may not exist at this time;
             }
@@ -152,7 +154,10 @@ var withApp = function (app, apiOptions) {
             }
 
             if (handlerOptions.cache) {
-                fnArray.push(handlerOptions.cache)
+                fnArray.push((req, res, next) => {
+                    retVal = req.context.cache.get(`${req.context.service}:${req.originalUrl}`)
+                    next()
+                })
             }
 
             fnArray.push((req, res) => {
@@ -178,21 +183,15 @@ var withApp = function (app, apiOptions) {
                             if (res.finished || value === undefined) {
                                 return
                             }
+                            retVal = value
+                            next()
                             // if(handlerOptions.invalidateCache){
                             //    cache.remove(`${req.context.service}${req.originalUrl}`) 
                             // }
                             // if(handlerOptions.cache && !fetchedFromCache){
                             //    cache.set(`${req.context.service}${req.originalUrl}`,retVal) 
                             // }
-                            if (typeof value === 'string' || value === null) {
-                                res.success(value)
-                            } else if (value instanceof Array) {
-                                res.page(value)
-                            } else if (value.items) {
-                                res.page(value.items, value.pageSize, value.pageNo, value.total, value.stats)
-                            } else {
-                                res.data(value)
-                            }
+
                         }).catch(err => {
                             logger.end()
                             res.failure(err)
@@ -203,6 +202,27 @@ var withApp = function (app, apiOptions) {
                     res.failure(err)
                 }
             })
+
+            if (handlerOptions.invalidateCache) {
+                fnArray.push((req, res, next) => {
+                    retVal = req.context.cache.set(`${req.context.service}:${req.originalUrl}`, retVal)
+                    next()
+                })
+            }
+            
+            fnArray.push((req, res, next) => {
+                if (typeof value === 'string' || value === null) {
+                    res.success(retVal)
+                } else if (retVal instanceof Array) {
+                    res.page(retVal)
+                } else if (retVal.items) {
+                    res.page(retVal.items, retVal.pageSize, retVal.pageNo, retVal.total, retVal.stats)
+                } else {
+                    res.data(retVal)
+                }
+            })
+
+
 
             switch (handlerOptions.action.toUpperCase()) {
                 case 'GET':

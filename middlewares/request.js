@@ -7,6 +7,7 @@ const apiConfig = JSON.parse(JSON.stringify(require('config').api || {}))
 const serviceConfig = JSON.parse(JSON.stringify(require('config').service || {}))
 const auth = require('../auth')
 const fieldHelper = require('../helpers/fields')
+const cache = require('../helpers/cache')
 
 
 const decorateResponse = (res, context, log) => {

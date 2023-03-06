@@ -1,3 +1,5 @@
+const cache = require(cacheProvider)
+
 exports.extend = item => {
     item.cache = item.cache || {}
 
