@@ -52,6 +52,7 @@ exports.run = async (file, config, context) => {
         let errored = false
 
         options.stdio = 'inherit'
+        options.shell = true
 
         const child = spawn(cmd, params, options)
 
