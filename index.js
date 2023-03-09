@@ -154,16 +154,21 @@ var withApp = function (app, apiOptions) {
             }
 
             if (handlerOptions.cache) {
-                fnArray.push((req, res, next) => {
-                    retVal = req.context.cache.get(`${req.context.service}:${req.originalUrl}`)
+                fnArray.push(async (req, res, next) => {
+                    req.context.cache = req.context.cache || {}
+                    req.context.doCache = true
+                    retVal = await req.context.cache.get('request')
+                    if(retVal){
+                        return res.json(retVal)
+                    }
                     next()
                 })
             }
 
-            fnArray.push((req, res) => {
+            fnArray.push((req, res, next) => {
                 let logger = req.context.logger.start('api')
                 try {
-                    let retVal
+                    // let retVal
                     //let fetchedFromCache = false
                     // let cache = require(dynamically get cache provider)
                     // let retVal
@@ -180,7 +185,7 @@ var withApp = function (app, apiOptions) {
                     if (retVal && retVal.then && typeof retVal.then === 'function') {
                         return retVal.then(value => {
                             logger.end()
-                            if (res.finished || value === undefined) {
+                            if (res.finished || retVal === undefined) {
                                 return
                             }
                             retVal = value
@@ -204,14 +209,14 @@ var withApp = function (app, apiOptions) {
             })
 
             if (handlerOptions.invalidateCache) {
-                fnArray.push((req, res, next) => {
-                    retVal = req.context.cache.set(`${req.context.service}:${req.originalUrl}`, retVal)
+                fnArray.push(async (req, res, next) => {
+                    retVal = await req.context.cache.remove('request', retVal)
                     next()
                 })
             }
             
             fnArray.push((req, res, next) => {
-                if (typeof value === 'string' || value === null) {
+                if (typeof retVal === 'string' || retVal === null) {
                     res.success(retVal)
                 } else if (retVal instanceof Array) {
                     res.page(retVal)

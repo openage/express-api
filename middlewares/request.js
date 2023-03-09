@@ -109,7 +109,8 @@ const decorateResponse = (res, context, log) => {
         }
 
         // TODO cache here
-        context.cache.set('request', val)
+        if (context.doCache)
+            context.cache.set('request', val)
 
         res.json(val)
     }
@@ -129,8 +130,8 @@ const decorateResponse = (res, context, log) => {
         log.end()
 
         // TODO Cache here
-
-        context.cache.set('request', val)
+        if (context.doCache)
+            context.cache.set('request', val)
         res.json(val)
     }
 }
@@ -279,7 +280,7 @@ const getContext = async (req, log, options) => {
         }
     }
 
-    context.cache = cache.extend(context)
+    cache.extend(context)
     context.include = req.query && req.query.include ? req.query.include : []
     context.exclude = req.query && req.query.exclude ? req.query.exclude : []
 
