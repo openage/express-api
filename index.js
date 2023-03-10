@@ -3,6 +3,9 @@ const appRoot = require('app-root-path')
 const requestHelper = require('./middlewares/request')
 const validationHelper = require('./middlewares/validation')
 const bulkHelper = require('./middlewares/bulk')
+const ruleValidator = require('./helpers/rule-validator')
+require('./helpers/string')
+
 
 const apiConfig = JSON.parse(JSON.stringify(require('config').api || {}))
 
@@ -77,7 +80,7 @@ module.exports = function (app, apiOptions) {
                     filter: handlerOption.filter,
                     method: method,
                     cache: handlerOption.cache,
-                    invalidateCache: handlerOption.invalidateCache
+                    code: handlerOption.code
                 }
 
                 return val
@@ -132,6 +135,7 @@ var withApp = function (app, apiOptions) {
             let fnArray = []
             fnArray.push(requestHelper.getMiddleware(apiOptions))
 
+            // let permissions = req.context.config.get(`api.${code}.permissions`,handlerOptions.permissions)
             if (handlerOptions.permissions) {
                 fnArray.push((req, res, next) => {
                     if (!req.context.hasPermission(handlerOptions.permissions)) {
@@ -153,31 +157,41 @@ var withApp = function (app, apiOptions) {
                 fnArray.push(handlerOptions.validator)
             }
 
-            if (handlerOptions.cache) {
-                fnArray.push(async (req, res, next) => {
-                    req.context.cache = req.context.cache || {}
-                    req.context.doCache = true
-                    retVal = await req.context.cache.get('request')
-                    if(retVal){
-                        return res.json(retVal)
+            fnArray.push(async (req, res, next) => {
+                handlerOptions.cache = handlerOptions.cache || {}
+                if (handlerOptions.code) {
+                    let cache = req.context.config.get(`api.${handlerOptions.code}.cache`, handlerOptions.cache)
+                    req.context.cache = { ...req.context.cache, ...cache }
+                    if (handlerOptions.cache.action == "add") {
+                        req.context.cache.key = req.context.cache.key.inject(req, req.context)
+                        if (handlerOptions.cache.condition) {
+                            req.context.doCache = ruleValidator.check(req, handlerOptions.cache.condition)
+                        }
                     }
-                    next()
-                })
-            }
+                }
+                next()
+            })
+
+            fnArray.push(async (req, res, next) => {
+                if (handlerOptions.cache && handlerOptions.cache.action == "add") {
+                    let log = req.context.logger.start('add-cache')
+                    try {
+                        retVal = await req.context.cache.get(`${req.context.service}:${req.context.cache.key}`)
+                        if (retVal) {
+                            return res.json(retVal)
+                        }
+                    } catch (err) {
+                        log.error(err)
+
+                    }
+                    log.end()
+                }
+                next()
+            })
 
             fnArray.push((req, res, next) => {
                 let logger = req.context.logger.start('api')
                 try {
-                    // let retVal
-                    //let fetchedFromCache = false
-                    // let cache = require(dynamically get cache provider)
-                    // let retVal
-                    // if(handlerOptions.cache){
-                    //    retVal = cache.get(`${req.context.service}:${req.originalUrl}`) 
-                    //    if(retVal){
-                    //fetchedFromCache = true
-                    //}
-                    // }
                     if (!retVal) {
                         retVal = handlerOptions.method(req, res)
                     }
@@ -190,12 +204,6 @@ var withApp = function (app, apiOptions) {
                             }
                             retVal = value
                             next()
-                            // if(handlerOptions.invalidateCache){
-                            //    cache.remove(`${req.context.service}${req.originalUrl}`) 
-                            // }
-                            // if(handlerOptions.cache && !fetchedFromCache){
-                            //    cache.set(`${req.context.service}${req.originalUrl}`,retVal) 
-                            // }
 
                         }).catch(err => {
                             logger.end()
@@ -208,14 +216,24 @@ var withApp = function (app, apiOptions) {
                 }
             })
 
-            if (handlerOptions.invalidateCache) {
+            if (handlerOptions.cache && handlerOptions.cache.action == "remove") {
                 fnArray.push(async (req, res, next) => {
-                    let k = req.originalUrl.split("/")
-                    await req.context.cache.remove(`${req.context.service}:/${k[1]}/${k[2]}`, 'pattern')
+                    let log = req.context.logger.start('remove-cache')
+                    try {
+                        handlerOptions.cache.key.forEach(async (k) => {
+                            k = k.inject(req, req.context)
+                            await req.context.cache.remove(`${req.context.service}:${k}`)
+                        })
+                    } catch (err) {
+                        log.end()
+                        res.failure(err)
+                    }
+                    log.end()
                     next()
+
                 })
             }
-            
+
             fnArray.push((req, res, next) => {
                 if (typeof retVal === 'string' || retVal === null) {
                     res.success(retVal)

@@ -14,27 +14,26 @@ client.on('connect', err => {
     }
 });
 
-exports.set = async (key, value) => {
-    await client.set(key, JSON.stringify(value));
+exports.set = async (key, value, ttl) => {
+    await client.set(key, JSON.stringify(value))
+    await client.expire(key, ttl)
 }
 
-exports.remove = async (key, isPattern) => {
-    if (isPattern) {
-        client.keys(key+'*', (err, keys) => {
-            if (err) throw err;
-
-            // delete each key that matches the pattern
+exports.remove = async (key) => {
+    return new Promise((resolve, reject) => {
+        client.keys(key, (err, keys) => {
+            if (err) reject(err);
             keys.forEach(key => {
                 client.del(key, (err, result) => {
-                    if (err) throw err;
+                    if (err) reject(err);
                     console.log(`Deleted key: ${key}`);
                 });
             });
         });
-    } else {
-        return await client.del(key);
-    }
+    })
+
 }
+
 
 exports.get = async (key) => {
     return new Promise((resolve, reject) => {

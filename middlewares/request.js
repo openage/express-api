@@ -8,6 +8,7 @@ const serviceConfig = JSON.parse(JSON.stringify(require('config').service || {})
 const auth = require('../auth')
 const fieldHelper = require('../helpers/fields')
 const cache = require('../helpers/cache')
+const config = require('../helpers/config')
 
 
 const decorateResponse = (res, context, log) => {
@@ -109,8 +110,8 @@ const decorateResponse = (res, context, log) => {
         }
 
         // TODO cache here
-        if (context.doCache)
-            context.cache.set('request', val)
+        if (context.cache.action == "add")
+            context.cache.set(`${context.service}:${context.cache.key}`, val, context.cache.ttl)
 
         res.json(val)
     }
@@ -131,7 +132,7 @@ const decorateResponse = (res, context, log) => {
 
         // TODO Cache here
         if (context.doCache)
-            context.cache.set('request', val)
+            context.cache.set(`${context.service}:${context.cache.key}`, val, context.cache.ttl)
         res.json(val)
     }
 }
@@ -280,6 +281,7 @@ const getContext = async (req, log, options) => {
         }
     }
 
+    context.config = config.extend(context)
     cache.extend(context)
     context.include = req.query && req.query.include ? req.query.include : []
     context.exclude = req.query && req.query.exclude ? req.query.exclude : []
