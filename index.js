@@ -210,7 +210,8 @@ var withApp = function (app, apiOptions) {
 
             if (handlerOptions.invalidateCache) {
                 fnArray.push(async (req, res, next) => {
-                    retVal = await req.context.cache.remove('request', retVal)
+                    let k = req.originalUrl.split("/")
+                    await req.context.cache.remove(`${req.context.service}:/${k[1]}/${k[2]}`, 'pattern')
                     next()
                 })
             }

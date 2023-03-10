@@ -10,12 +10,12 @@ exports.extend = item => {
         }
         return cache.get(key)
     }
-    item.cache.remove = async (key) => {
+    item.cache.remove = async (key, isPattern) => {
         if (key === 'request') {
             let k = await cache.remove(`${item.service}:${item.url}`)
             return k
         }
-        return cache.remove(key)
+        return cache.remove(key,isPattern)
 
     }
     item.cache.set = (key, value) => {
