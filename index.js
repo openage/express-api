@@ -157,9 +157,9 @@ var withApp = function (app, apiOptions) {
 
             fnArray.push(async (req, res, next) => {
                 handlerOptions.cache = handlerOptions.cache || {}
-                if (handlerOptions.code) {
+                if (handlerOptions.action == "GET" && handlerOptions.code) {
                     let cache = req.context.config.get(`api.${handlerOptions.code}.cache`, handlerOptions.cache)
-                    req.context.cache = { ...req.context.cache, ...cache }
+                    req.context.cache = { ...req.context.cache, ...cache, httpAction: 'GET'}
                     if (handlerOptions.cache.action == "add") {
                         req.context.cache.key = req.context.cache.key.inject(req, req.context)
                         if (handlerOptions.cache.condition) {
