@@ -1,18 +1,41 @@
+var queueConfig = require('config').get('queueServer')
 const redis = require("redis")
-const client = redis.createClient({
-    "host": 'localhost',
-    "port": 6379,
-    "maxmemory": '1gb',
-    "maxmemory-policy": 'allkeys-lru'
-})
 
-client.on('connect', err => {
-    if (err) {
-        console.log("error while connecting to redis cache: -", err)
-    } else {
-        console.log("Connected to Redis Cache")
+let options = {
+    port: 6379,
+    host: '127.0.0.1',
+    options: {
+        password: 'foobared',
+        "maxmemory-policy": 'allkeys-lru',
+        maxmemory: '1gb'
     }
-});
+}
+
+const setOptions = (config) => {
+    if (config.port) {
+        options.port = config.port
+    }
+
+    if (config.host) {
+        options.host = config.host
+    }
+
+    if (config['maxmemory-policy']) {
+        options.options['maxmemory-policy'] = config['maxmemory-policy']
+    }
+
+    if (config.maxmemory) {
+        options.options.maxmemory = config.maxmemory
+    }
+    if (config.password) {
+        options.options.password = config.password
+    }
+}
+
+setOptions(JSON.parse(JSON.stringify(queueConfig)) || {})
+
+
+const client = redis.createClient(options.port, options.host, options.options)
 
 exports.set = async (key, value, ttl) => {
     await client.set(key, JSON.stringify(value))
@@ -21,17 +44,17 @@ exports.set = async (key, value, ttl) => {
 
 exports.remove = async (key) => {
     return new Promise((resolve, reject) => {
-        client.keys(key, (err, keys) => {
-            if (err) reject(err);
-            keys.forEach(key => {
-                client.del(key, (err, result) => {
-                    if (err) reject(err);
-                    console.log(`Deleted key: ${key}`);
-                });
-            });
-        });
+        client.keys(key, async (err, keys) => {
+            if (!err) {
+                for (let key of keys) {
+                    await client.del(key)
+                }
+                resolve()
+            } else {
+                reject(err)
+            }
+        })
     })
-
 }
 
 

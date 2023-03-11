@@ -127,8 +127,6 @@ module.exports = function (app, apiOptions) {
 var withApp = function (app, apiOptions) {
     return {
         register: function (handlerOptions) {
-            let fetchedFromCache = false
-            let retVal
             if (!handlerOptions.method) {
                 return // the method may not exist at this time;
             }
@@ -176,54 +174,26 @@ var withApp = function (app, apiOptions) {
                 if (handlerOptions.cache && handlerOptions.cache.action == "add") {
                     let log = req.context.logger.start('add-cache')
                     try {
-                        retVal = await req.context.cache.get(`${req.context.service}:${req.context.cache.key}`)
+                        let retVal = await req.context.cache.get(`${req.context.service}:${req.context.cache.key}`)
                         if (retVal) {
                             return res.json(retVal)
                         }
                     } catch (err) {
                         log.error(err)
-
                     }
                     log.end()
                 }
                 next()
             })
 
-            fnArray.push((req, res, next) => {
-                let logger = req.context.logger.start('api')
-                try {
-                    if (!retVal) {
-                        retVal = handlerOptions.method(req, res)
-                    }
-
-                    if (retVal && retVal.then && typeof retVal.then === 'function') {
-                        return retVal.then(value => {
-                            logger.end()
-                            if (res.finished || retVal === undefined) {
-                                return
-                            }
-                            retVal = value
-                            next()
-
-                        }).catch(err => {
-                            logger.end()
-                            res.failure(err)
-                        })
-                    }
-                } catch (err) {
-                    logger.end()
-                    res.failure(err)
-                }
-            })
-
             if (handlerOptions.cache && handlerOptions.cache.action == "remove") {
                 fnArray.push(async (req, res, next) => {
                     let log = req.context.logger.start('remove-cache')
                     try {
-                        handlerOptions.cache.key.forEach(async (k) => {
+                        for(let k of handlerOptions.cache.key){
                             k = k.inject(req, req.context)
                             await req.context.cache.remove(`${req.context.service}:${k}`)
-                        })
+                        }
                     } catch (err) {
                         log.end()
                         res.failure(err)
@@ -235,18 +205,36 @@ var withApp = function (app, apiOptions) {
             }
 
             fnArray.push((req, res, next) => {
-                if (typeof retVal === 'string' || retVal === null) {
-                    res.success(retVal)
-                } else if (retVal instanceof Array) {
-                    res.page(retVal)
-                } else if (retVal.items) {
-                    res.page(retVal.items, retVal.pageSize, retVal.pageNo, retVal.total, retVal.stats)
-                } else {
-                    res.data(retVal)
+                let logger = req.context.logger.start('api')
+                try {
+                    let retVal = handlerOptions.method(req, res)
+
+                    if (retVal && retVal.then && typeof retVal.then === 'function') {
+                        return retVal.then(value => {
+                            logger.end()
+                            if (res.finished || retVal === undefined) {
+                                return
+                            }
+                            retVal = value
+                            if (typeof retVal === 'string' || retVal === null) {
+                                res.success(retVal)
+                            } else if (retVal instanceof Array) {
+                                res.page(retVal)
+                            } else if (retVal.items) {
+                                res.page(retVal.items, retVal.pageSize, retVal.pageNo, retVal.total, retVal.stats)
+                            } else {
+                                res.data(retVal)
+                            }
+                        }).catch(err => {
+                            logger.end()
+                            res.failure(err)
+                        })
+                    }
+                } catch (err) {
+                    logger.end()
+                    res.failure(err)
                 }
             })
-
-
 
             switch (handlerOptions.action.toUpperCase()) {
                 case 'GET':

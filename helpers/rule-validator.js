@@ -1,6 +1,9 @@
 exports.check = (data, condition) => {
-    if(!data )
-    return evaluate(condition.key, condition.value, condition.operator, data)
+    if(!data ){
+        return false
+    }
+    let n = evaluate(condition.key, condition.value, condition.operator, data)
+    return n
 }
 
 const evaluate = (key, value, operator, data) => {

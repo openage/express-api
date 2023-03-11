@@ -63,17 +63,22 @@ String.prototype.inject = function (data, context) {
             // eslint-disable-next-line no-return-assign
             return obj[is[0]] = value
         } else if (is.length === 0) {
-            if (obj && (typeof obj === 'object') && (Object.keys(obj).length != 0)) {
-                isObject = true
-                let l = {}
-                let keys = Object.keys(obj)
-                keys.sort()
-                keys.forEach(key => {
-                    l[key] = obj[key]
-                })
-                obj = l
-                obj = JSON.stringify(obj)
-            }
+            if (obj && (typeof obj === 'object')) {
+                if((Object.keys(obj).length != 0)){
+                    isObject = true
+                    let l = {}
+                    let keys = Object.keys(obj)
+                    keys.sort()
+                    keys.forEach(key => {
+                        l[key] = obj[key]
+                    })
+                    obj = l
+                    obj = JSON.stringify(obj)
+                } else {
+                    obj = ""
+                }
+
+            } 
             return obj
         } else {
             const prop = is.shift()
