@@ -213,18 +213,17 @@ var withApp = function (app, apiOptions) {
                     if (retVal && retVal.then && typeof retVal.then === 'function') {
                         return retVal.then(value => {
                             logger.end()
-                            if (res.finished || retVal === undefined) {
+                            if (res.finished || value === undefined) {
                                 return
                             }
-                            retVal = value
-                            if (typeof retVal === 'string' || retVal === null) {
-                                res.success(retVal)
-                            } else if (retVal instanceof Array) {
-                                res.page(retVal)
-                            } else if (retVal.items) {
-                                res.page(retVal.items, retVal.pageSize, retVal.pageNo, retVal.total, retVal.stats)
+                            if (typeof value === 'string' || value === null) {
+                                res.success(value)
+                            } else if (value instanceof Array) {
+                                res.page(value)
+                            } else if (value.items) {
+                                res.page(value.items, value.pageSize, value.pageNo, value.total, value.stats)
                             } else {
-                                res.data(retVal)
+                                res.data(value)
                             }
                         }).catch(err => {
                             logger.end()
