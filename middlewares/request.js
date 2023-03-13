@@ -111,7 +111,7 @@ const decorateResponse = (res, context, log) => {
         }
 
         // TODO cache here
-        if (context.cache && context.cache.httpAction == "GET" && context.cache.action == "add")
+        if (context.cache.httpAction == "GET" && context.cache.action == "add" && context.cache.key)
             context.cache.set(`${context.service}:${context.cache.key}`, val, context.cache.ttl)
 
         res.json(val)
