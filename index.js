@@ -5,6 +5,7 @@ const validationHelper = require('./middlewares/validation')
 const bulkHelper = require('./middlewares/bulk')
 const ruleValidator = require('./helpers/rule-validator')
 require('./helpers/string')
+require('./helpers/cache')
 
 
 const apiConfig = JSON.parse(JSON.stringify(require('config').api || {}))

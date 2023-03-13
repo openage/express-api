@@ -1,4 +1,3 @@
-var queueConfig = require('config').get('queueServer')
 const redis = require("redis")
 
 let options = {
@@ -32,39 +31,38 @@ const setOptions = (config) => {
     }
 }
 
-setOptions(JSON.parse(JSON.stringify(queueConfig)) || {})
+exports.connect = (config) => {
+    setOptions(JSON.parse(JSON.stringify(config)) || {})
+    const client = redis.createClient(options.port, options.host, options.options)
+    return {
+        set: async (key, value, ttl) => {
+            await client.set(key, JSON.stringify(value))
+            await client.expire(key, ttl)
+        },
+        remove: async (key) => {
+            return new Promise((resolve, reject) => {
+                client.keys(key, async (err, keys) => {
+                    if (!err) {
+                        for (let key of keys) {
+                            await client.del(key)
+                        }
+                        resolve()
+                    } else {
+                        reject(err)
+                    }
+                })
+            })
+        },
+        get: async (key) => {
+            return new Promise((resolve, reject) => {
+                client.get(key, function (err, reply) {
+                    if (err) {
+                        reject(err)
+                    }
+                    resolve(JSON.parse(reply))
+                });
+            })
+        }
+    }
 
-
-const client = redis.createClient(options.port, options.host, options.options)
-
-exports.set = async (key, value, ttl) => {
-    await client.set(key, JSON.stringify(value))
-    await client.expire(key, ttl)
-}
-
-exports.remove = async (key) => {
-    return new Promise((resolve, reject) => {
-        client.keys(key, async (err, keys) => {
-            if (!err) {
-                for (let key of keys) {
-                    await client.del(key)
-                }
-                resolve()
-            } else {
-                reject(err)
-            }
-        })
-    })
-}
-
-
-exports.get = async (key) => {
-    return new Promise((resolve, reject) => {
-        client.get(key, function (err, reply) {
-            if (err) {
-                reject(err)
-            }
-            resolve(JSON.parse(reply))
-        });
-    })
 }

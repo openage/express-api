@@ -1,8 +1,7 @@
-
+var cacheConfig = require('config').get('cache')
+const cache = require(`../providers/cache/${cacheConfig.provider}`).connect(cacheConfig)
 
 exports.extend = item => {
-    let provider = item.config.get(`provider.cache`, 'redis')
-    const cache = require(`../providers/cache/${provider}`)
     item.cache = item.cache || {}
     let k = item
 
