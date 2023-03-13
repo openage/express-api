@@ -133,16 +133,14 @@ var withApp = function (app, apiOptions) {
             let fnArray = []
             fnArray.push(requestHelper.getMiddleware(apiOptions))
 
-            // let permissions = req.context.config.get(`api.${code}.permissions`,handlerOptions.permissions)
-            if (handlerOptions.permissions) {
-                fnArray.push((req, res, next) => {
-                    if (!req.context.hasPermission(handlerOptions.permissions)) {
-                        res.accessDenied()
-                    } else {
-                        next()
-                    }
-                })
-            }
+            fnArray.push((req, res, next) => {
+                let permissions = req.context.config.get(`api.${handlerOptions.code}.permissions`, handlerOptions.permissions)
+                if (!req.context.hasPermission(permissions)) {
+                    res.accessDenied()
+                } else {
+                    next()
+                }
+            })
             if (handlerOptions.filter) {
                 fnArray.push(...extractMiddlewares(handlerOptions.filter))
             }
@@ -156,40 +154,39 @@ var withApp = function (app, apiOptions) {
             }
 
             fnArray.push(async (req, res, next) => {
+                handlerOptions.cache = null
                 let cache = req.context.config.get(`api.${handlerOptions.code}.cache`, handlerOptions.cache)
-                if (handlerOptions.action == "GET") {
-                    req.context.cache['httpAction'] = 'GET'
+                req.context.cache = { ...req.context.cache, ...cache }
+                if (cache) {
                     if (cache.action == "add" && cache.key) {
-                        cache.key = cache.key.inject(req, req.context)
-                        if (cache.condition) {
-                            req.context.doCache = req.context.ruleValidator.check(req, cache.condition)
-                        }
+                        req.context.cache.key = cache.key.inject(req, req.context)
                     }
-                }
-                if (cache.action == "add") {
-                    let log = req.context.logger.start('add-cache')
-                    try {
-                        let retVal = await req.context.cache.get(`${req.context.service}:${req.context.cache.key}`)
-                        if (retVal) {
-                            return res.json(retVal)
+
+                    if (cache.action == "add") {
+                        let log = req.context.logger.start('add-cache')
+                        try {
+                            req.context.retVal = await req.context.cache.get(`${req.context.service}:${req.context.cache.key}`)
+                            if (req.context.retVal) {
+                                req.context.fetchedFromCache = true
+                            }
+                        } catch (err) {
+                            log.error(err)
                         }
-                    } catch (err) {
-                        log.error(err)
-                    }
-                    log.end()
-                }
-                if (cache.action == "remove") {
-                    let log = req.context.logger.start('remove-cache')
-                    try {
-                        for (let k of req.context.cache.key) {
-                            k = k.inject(req, req.context)
-                            await req.context.cache.remove(`${req.context.service}:${k}`)
-                        }
-                    } catch (err) {
                         log.end()
-                        res.failure(err)
                     }
-                    log.end()
+                    if (cache.action == "remove") {
+                        let log = req.context.logger.start('remove-cache')
+                        try {
+                            for (let k of req.context.cache.key) {
+                                k = k.inject(req, req.context)
+                                await req.context.cache.remove(`${req.context.service}:${k}`)
+                            }
+                        } catch (err) {
+                            log.end()
+                            res.failure(err)
+                        }
+                        log.end()
+                    }
                 }
                 next()
             })
@@ -197,31 +194,50 @@ var withApp = function (app, apiOptions) {
             fnArray.push((req, res, next) => {
                 let logger = req.context.logger.start('api')
                 try {
-                    let retVal = handlerOptions.method(req, res)
-                    
-                    if (retVal && retVal.then && typeof retVal.then === 'function') {
-                        return retVal.then(value => {
+                    let retValue
+                    if (!req.context.fetchedFromCache) {
+                        retValue = handlerOptions.method(req, res)
+                    }
+
+                    if (retValue && retValue.then && typeof retValue.then === 'function') {
+                        return retValue.then(value => {
                             logger.end()
-                            if (res.finished || value === undefined) {
-                                return
-                            }
-                            if (typeof value === 'string' || value === null) {
-                                res.success(value)
-                            } else if (value instanceof Array) {
-                                res.page(value)
-                            } else if (value.items) {
-                                res.page(value.items, value.pageSize, value.pageNo, value.total, value.stats)
-                            } else {
-                                res.data(value)
-                            }
+                            req.context.retVal = value
+                            next()
                         }).catch(err => {
                             logger.end()
                             res.failure(err)
                         })
+                    } else if (req.context.retVal) {
+                        next()
                     }
                 } catch (err) {
                     logger.end()
                     res.failure(err)
+                }
+            })
+
+            fnArray.push((req, res, next) => {
+                let retValue = req.context.retVal
+                let cache = req.context.cache
+                if (res.finished || retValue === undefined) {
+                    return
+                }
+                let doCache = checkIfCache(req, cache, handlerOptions, retValue)
+                if (typeof retValue === 'string' || retValue === null) {
+                    res.success(retValue)
+                } else if (retValue instanceof Array) {
+                    if (doCache)
+                        cache.set(`${req.context.service}:${cache.key}`, retValue, cache.ttl)
+                    res.page(retValue)
+                } else if (retValue.items) {
+                    if (doCache)
+                        cache.set(`${req.context.service}:${cache.key}`, retValue, cache.ttl)
+                    res.page(retValue.items, retValue.pageSize, retValue.pageNo, retValue.total, retValue.stats)
+                } else {
+                    if (doCache)
+                        cache.set(`${req.context.service}:${cache.key}`, retValue, cache.ttl)
+                    res.data(retValue)
                 }
             })
 
@@ -248,6 +264,20 @@ var withApp = function (app, apiOptions) {
             }
         }
     }
+}
+const checkIfCache = (req, cache, handlerOptions, value) => {
+    let doCache = false
+    if (!req.context.fetchedFromCache && cache.key && handlerOptions.action == "GET" && cache.action == "add") {
+        if (cache.condition) {
+            doCache = req.context.ruleValidator.check(req, cache.condition)
+        } else {
+            if (!(value instanceof Array || value.items)) {
+                doCache = true
+            }
+        }
+    }
+
+    return doCache
 }
 
 var crudOptions = function (filterFn) {

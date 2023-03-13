@@ -110,10 +110,6 @@ const decorateResponse = (res, context, log) => {
             res.set('Last-Modified', moment(item.timeStamp).toISOString())
         }
 
-        // TODO cache here
-        if (context.cache.httpAction == "GET" && context.cache.action == "add" && context.cache.key)
-            context.cache.set(`${context.service}:${context.cache.key}`, val, context.cache.ttl)
-
         res.json(val)
     }
     res.page = (items, pageSize, pageNo, total, stats) => {
@@ -131,9 +127,6 @@ const decorateResponse = (res, context, log) => {
         log.silly('page', val)
         log.end()
 
-        // TODO Cache here
-        if (context.doCache)
-            context.cache.set(`${context.service}:${context.cache.key}`, val, context.cache.ttl)
         res.json(val)
     }
 }
