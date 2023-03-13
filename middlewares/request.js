@@ -9,6 +9,7 @@ const auth = require('../auth')
 const fieldHelper = require('../helpers/fields')
 const cache = require('../helpers/cache')
 const config = require('../helpers/config')
+const ruleValidator = require('../helpers/rule-validator')
 
 
 const decorateResponse = (res, context, log) => {
@@ -281,8 +282,10 @@ const getContext = async (req, log, options) => {
         }
     }
 
-    context.config = config.extend(context)
+    config.extend(context)
     cache.extend(context)
+    ruleValidator.extend(context)
+
     context.include = req.query && req.query.include ? req.query.include : []
     context.exclude = req.query && req.query.exclude ? req.query.exclude : []
 

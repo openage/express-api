@@ -1,9 +1,13 @@
-exports.check = (data, condition) => {
-    if(!data ){
-        return false
+
+exports.extend = (context) => {
+    context.ruleValidator = context.ruleValidator || {}
+    context.ruleValidator['check'] = (data, condition) => {
+        if(!data ){
+            return false
+        }
+        let n = evaluate(condition.key, condition.value, condition.operator, data)
+        return n
     }
-    let n = evaluate(condition.key, condition.value, condition.operator, data)
-    return n
 }
 
 const evaluate = (key, value, operator, data) => {

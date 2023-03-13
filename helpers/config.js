@@ -14,30 +14,30 @@ exports.extend = context => {
         return value
     }
 
-    return {
-        get: (key, defaultValue) => {
-            let value = context.organization ? getValue(key, context.organization.config) : null
+    context.config = context.config || {}
 
-            if (!value) {
-                value = context.tenant ? getValue(key, context.tenant.config) : null
-            }
+    context.config.get = (key, defaultValue) => {
+        let value = context.organization ? getValue(key, context.organization.config) : null
 
-            if (!value && defaultConfig.has(key)) {
-                value = defaultConfig.get(key)
-            }
-
-            if (!value) {
-                value = defaultValue
-            }
-
-            if (!value) {
-                switch (key) {
-                    case 'timeZone':
-                        return 'IST'
-                }
-            }
-
-            return value
+        if (!value) {
+            value = context.tenant ? getValue(key, context.tenant.config) : null
         }
+
+        if (!value && defaultConfig.has(key)) {
+            value = defaultConfig.get(key)
+        }
+
+        if (!value) {
+            value = defaultValue
+        }
+
+        if (!value) {
+            switch (key) {
+                case 'timeZone':
+                    return 'IST'
+            }
+        }
+
+        return value
     }
 }
