@@ -157,21 +157,16 @@ var withApp = function (app, apiOptions) {
 
             fnArray.push(async (req, res, next) => {
                 let cache = req.context.config.get(`api.${handlerOptions.code}.cache`, handlerOptions.cache)
-                req.context.cache = { ...req.context.cache, ...cache }
                 if (handlerOptions.action == "GET") {
                     req.context.cache['httpAction'] = 'GET'
-                    if (req.context.cache.action == "add" && req.context.cache.key) {
-                        req.context.cache.key = req.context.cache.key.inject(req, req.context)
-                        if (req.context.cache.condition) {
-                            req.context.doCache = req.context.ruleValidator.check(req, req.context.cache.condition)
+                    if (cache.action == "add" && cache.key) {
+                        cache.key = cache.key.inject(req, req.context)
+                        if (cache.condition) {
+                            req.context.doCache = req.context.ruleValidator.check(req, cache.condition)
                         }
                     }
                 }
-                next()
-            })
-
-            fnArray.push(async (req, res, next) => {
-                if (req.context.cache.action == "add") {
+                if (cache.action == "add") {
                     let log = req.context.logger.start('add-cache')
                     try {
                         let retVal = await req.context.cache.get(`${req.context.service}:${req.context.cache.key}`)
@@ -183,11 +178,7 @@ var withApp = function (app, apiOptions) {
                     }
                     log.end()
                 }
-                next()
-            })
-
-            fnArray.push(async (req, res, next) => {
-                if (req.context.cache.action == "remove") {
+                if (cache.action == "remove") {
                     let log = req.context.logger.start('remove-cache')
                     try {
                         for (let k of req.context.cache.key) {
@@ -200,16 +191,14 @@ var withApp = function (app, apiOptions) {
                     }
                     log.end()
                 }
-
                 next()
-
             })
 
             fnArray.push((req, res, next) => {
                 let logger = req.context.logger.start('api')
                 try {
                     let retVal = handlerOptions.method(req, res)
-
+                    
                     if (retVal && retVal.then && typeof retVal.then === 'function') {
                         return retVal.then(value => {
                             logger.end()
