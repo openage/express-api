@@ -156,7 +156,6 @@ var withApp = function (app, apiOptions) {
             }
 
             fnArray.push(async (req, res, next) => {
-                handlerOptions.code = null
                 let cache = req.context.config.get(`api.${handlerOptions.code}.cache`, handlerOptions.cache)
                 req.context.cache = { ...req.context.cache, ...cache }
                 if (handlerOptions.action == "GET") {
