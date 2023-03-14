@@ -288,20 +288,6 @@ var withApp = function (app, apiOptions) {
         }
     }
 }
-const checkIfCache = (req, cache, handlerOptions, value) => {
-    let doCache = false
-    if (!req.context.fetchedFromCache && cache.key && handlerOptions.action == "GET" && cache.action == "add") {
-        if (cache.condition) {
-            doCache = req.context.ruleValidator.check(req, cache.condition)
-        } else {
-            if (!(value instanceof Array || value.items)) {
-                doCache = true
-            }
-        }
-    }
-
-    return doCache
-}
 
 var crudOptions = function (filterFn) {
     return [{
