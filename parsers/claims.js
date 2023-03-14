@@ -46,6 +46,9 @@ const strategy = {
             return {
                 role: {
                     key: data.key
+                },
+                 session:{
+                    id:data.session
                 }
             }
         }
