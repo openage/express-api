@@ -6,11 +6,51 @@ const bulkHelper = require('./middlewares/bulk')
 require('./helpers/string')
 require('./helpers/cache')
 
+const about = require('../../../package.json')
+
 
 const apiConfig = JSON.parse(JSON.stringify(require('config').api || {}))
 
 apiConfig.dir = apiConfig.dir || 'api'
 apiConfig.root = apiConfig.root || 'api'
+
+const getCacheConfig = (req, handlerOptions) => {
+
+    let context = req.context
+
+    let cache = context.config.get(`api.${handlerOptions.code}.cache`, handlerOptions.cache)
+
+    if (!cache) {
+        return
+    }
+    let keys = []
+
+    cache.keys = cache.keys || cache.key
+
+    if (!Array.isArray(cache.keys)) {
+        cache.keys = [cache.keys]
+    }
+
+
+    for (const key of cache.keys) {
+        keys.push(`${about.name}:${key.inject(req, context)}`)
+    }
+
+    cache.keys = keys
+
+    if (cache.condition && !req.context.ruleValidator.check(req, cache.condition)) {
+        return
+    }
+
+    if (!cache.keys || !cache.keys.length) {
+        return
+    }
+
+    // TODO
+    cache.action = cache.action || 'set'
+
+    return cache
+}
 
 const extractMiddlewares = (middlewares) => {
     const parseMiddleware = (item) => {
@@ -124,6 +164,16 @@ module.exports = function (app, apiOptions) {
     return self
 }
 
+const getApiResp = (handlerOptions, req, res) => {
+    return new Promise((resolve, rejects) => {
+        handlerOptions.method(req, res).then(value => {
+            resolve(value)
+        }).catch(err => {
+            rejects(err)
+        })
+    })
+}
+
 var withApp = function (app, apiOptions) {
     return {
         register: function (handlerOptions) {
@@ -154,92 +204,65 @@ var withApp = function (app, apiOptions) {
             }
 
             fnArray.push(async (req, res, next) => {
-                handlerOptions.cache = null
-                let cache = req.context.config.get(`api.${handlerOptions.code}.cache`, handlerOptions.cache)
-                req.context.cache = { ...req.context.cache, ...cache }
-                if (cache) {
-                    if (cache.action == "add" && cache.key) {
-                        req.context.cache.key = cache.key.inject(req, req.context)
-                    }
-
-                    if (cache.action == "add") {
-                        let log = req.context.logger.start('add-cache')
-                        try {
-                            req.context.retVal = await req.context.cache.get(`${req.context.service}:${req.context.cache.key}`)
-                            if (req.context.retVal) {
-                                req.context.fetchedFromCache = true
-                            }
-                        } catch (err) {
-                            log.error(err)
-                        }
-                        log.end()
-                    }
-                    if (cache.action == "remove") {
-                        let log = req.context.logger.start('remove-cache')
-                        try {
-                            for (let k of req.context.cache.key) {
-                                k = k.inject(req, req.context)
-                                await req.context.cache.remove(`${req.context.service}:${k}`)
-                            }
-                        } catch (err) {
-                            log.end()
-                            res.failure(err)
-                        }
-                        log.end()
-                    }
-                }
-                next()
-            })
-
-            fnArray.push((req, res, next) => {
                 let logger = req.context.logger.start('api')
                 try {
+
+                    let cacheConfig = getCacheConfig(req, handlerOptions)
+                    let cache = req.context.cache
+
                     let retValue
-                    if (!req.context.fetchedFromCache) {
-                        retValue = handlerOptions.method(req, res)
+                    let isCached = false
+                    try {
+                        if (handlerOptions.action === "GET" && cacheConfig) {
+                            retValue = await req.context.cache.get(cacheConfig.keys[0])
+                            if (retValue)
+                                isCached = true
+                        }
+
+                        if (!retValue) {
+                            retValue = await getApiResp(handlerOptions, req, res)
+                        }
+                        logger.end()
+                        if (res.finished || retValue === undefined) {
+                            return
+                        }
+
+                        if (typeof retValue === 'string' || retValue === null) {
+                            res.success(retValue)
+                        } else if (retValue instanceof Array) {
+                            if (!isCached && cacheConfig) {
+                                for (const key of cacheConfig.keys) {
+                                    await cache[cacheConfig.action](key, retValue, cacheConfig.ttl)
+                                }
+                            }
+                            res.page(retValue)
+                        } else if (retValue.items) {
+                            if (!isCached && cacheConfig) {
+                                for (const key of cacheConfig.keys) {
+                                    await cache[cacheConfig.action](key, retValue, cacheConfig.ttl)
+                                }
+                            }
+                            res.page(retValue.items, retValue.pageSize, retValue.pageNo, retValue.total, retValue.stats)
+                        } else {
+                            if (!isCached && cacheConfig) {
+                                for (const key of cacheConfig.keys) {
+                                    await cache[cacheConfig.action](key, retValue, cacheConfig.ttl)
+                                }
+                            }
+                            res.data(retValue)
+                        }
+                    } catch (err) {
+                        logger.end()
+                        res.failure(err)
                     }
 
-                    if (retValue && retValue.then && typeof retValue.then === 'function') {
-                        return retValue.then(value => {
-                            logger.end()
-                            req.context.retVal = value
-                            next()
-                        }).catch(err => {
-                            logger.end()
-                            res.failure(err)
-                        })
-                    } else if (req.context.retVal) {
-                        next()
-                    }
                 } catch (err) {
                     logger.end()
                     res.failure(err)
                 }
             })
 
-            fnArray.push((req, res, next) => {
-                let retValue = req.context.retVal
-                let cache = req.context.cache
-                if (res.finished || retValue === undefined) {
-                    return
-                }
-                let doCache = checkIfCache(req, cache, handlerOptions, retValue)
-                if (typeof retValue === 'string' || retValue === null) {
-                    res.success(retValue)
-                } else if (retValue instanceof Array) {
-                    if (doCache)
-                        cache.set(`${req.context.service}:${cache.key}`, retValue, cache.ttl)
-                    res.page(retValue)
-                } else if (retValue.items) {
-                    if (doCache)
-                        cache.set(`${req.context.service}:${cache.key}`, retValue, cache.ttl)
-                    res.page(retValue.items, retValue.pageSize, retValue.pageNo, retValue.total, retValue.stats)
-                } else {
-                    if (doCache)
-                        cache.set(`${req.context.service}:${cache.key}`, retValue, cache.ttl)
-                    res.data(retValue)
-                }
-            })
+
 
             switch (handlerOptions.action.toUpperCase()) {
                 case 'GET':

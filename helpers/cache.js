@@ -18,7 +18,7 @@ exports.extend = item => {
     item.cache.remove = async (key) => {
         return await cache.remove(key)
     }
-    item.cache.set = async (key, value, ttl = 5 * 60) => {
+    item.cache.add = async (key, value, ttl = 5 * 60) => {
         return await cache.set(key, value, ttl)
     }
 }

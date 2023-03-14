@@ -4,9 +4,9 @@ let options = {
     port: 6379,
     host: '127.0.0.1',
     options: {
-        password: 'foobared',
         "maxmemory-policy": 'allkeys-lru',
-        maxmemory: '1gb'
+        maxmemory: '1gb',
+        enable_offline_queue: false,
     }
 }
 
