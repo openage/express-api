@@ -3,11 +3,54 @@ const appRoot = require('app-root-path')
 const requestHelper = require('./middlewares/request')
 const validationHelper = require('./middlewares/validation')
 const bulkHelper = require('./middlewares/bulk')
+require('./helpers/string')
+require('./helpers/cache')
+
+const about = require('../../../package.json')
+
 
 const apiConfig = JSON.parse(JSON.stringify(require('config').api || {}))
 
 apiConfig.dir = apiConfig.dir || 'api'
 apiConfig.root = apiConfig.root || 'api'
+
+const getCacheConfig = (req, handlerOptions) => {
+
+    let context = req.context
+
+    let cache = context.config.get(`api.${handlerOptions.code}.cache`, handlerOptions.cache)
+
+    if (!cache) {
+        return
+    }
+    let keys = []
+
+    cache.keys = cache.keys || cache.key
+
+    if (!Array.isArray(cache.keys)) {
+        cache.keys = [cache.keys]
+    }
+
+
+    for (const key of cache.keys) {
+        keys.push(`${about.name}:${key.inject(req, context)}`)
+    }
+
+    cache.keys = keys
+
+    if (cache.condition && !req.context.ruleValidator.check(req, cache.condition)) {
+        return
+    }
+
+    if (!cache.keys || !cache.keys.length) {
+        return
+    }
+
+    // TODO
+    cache.action = cache.action || 'set'
+
+    return cache
+}
 
 const extractMiddlewares = (middlewares) => {
     const parseMiddleware = (item) => {
@@ -75,7 +118,9 @@ module.exports = function (app, apiOptions) {
                     validator: validationHelper.getMiddlware(params.model, methodName),
                     importer: bulkHelper.getMiddleware(params.model, handlerOption.url),
                     filter: handlerOption.filter,
-                    method: method
+                    method: method,
+                    cache: handlerOption.cache,
+                    code: handlerOption.code
                 }
 
                 return val
@@ -119,6 +164,16 @@ module.exports = function (app, apiOptions) {
     return self
 }
 
+const getApiResp = (handlerOptions, req, res) => {
+    return new Promise((resolve, rejects) => {
+        handlerOptions.method(req, res).then(value => {
+            resolve(value)
+        }).catch(err => {
+            rejects(err)
+        })
+    })
+}
+
 var withApp = function (app, apiOptions) {
     return {
         register: function (handlerOptions) {
@@ -128,15 +183,14 @@ var withApp = function (app, apiOptions) {
             let fnArray = []
             fnArray.push(requestHelper.getMiddleware(apiOptions))
 
-            if (handlerOptions.permissions) {
-                fnArray.push((req, res, next) => {
-                    if (!req.context.hasPermission(handlerOptions.permissions)) {
-                        res.accessDenied()
-                    } else {
-                        next()
-                    }
-                })
-            }
+            fnArray.push((req, res, next) => {
+                let permissions = req.context.config.get(`api.${handlerOptions.code}.permissions`, handlerOptions.permissions)
+                if (!req.context.hasPermission(permissions)) {
+                    res.accessDenied()
+                } else {
+                    next()
+                }
+            })
             if (handlerOptions.filter) {
                 fnArray.push(...extractMiddlewares(handlerOptions.filter))
             }
@@ -149,39 +203,70 @@ var withApp = function (app, apiOptions) {
                 fnArray.push(handlerOptions.validator)
             }
 
-            fnArray.push((req, res) => {
+            fnArray.push(async (req, res, next) => {
                 let logger = req.context.logger.start('api')
                 try {
-                    let retVal = handlerOptions.method(req, res)
 
-                    if (retVal && retVal.then && typeof retVal.then === 'function') {
-                        return retVal.then(value => {
-                            logger.end()
-                            if (res.finished || value === undefined) {
-                                return
+                    let cacheConfig = getCacheConfig(req, handlerOptions)
+                    let cache = req.context.cache
+
+                    let retValue
+                    let isCached = false
+                    try {
+                        if (handlerOptions.action === "GET" && cacheConfig) {
+                            retValue = await req.context.cache.get(cacheConfig.keys[0])
+                            if (retValue)
+                                isCached = true
+                        }
+
+                        if (!retValue) {
+                            retValue = await getApiResp(handlerOptions, req, res)
+                        }
+                        logger.end()
+                        if (res.finished || retValue === undefined) {
+                            return
+                        }
+
+                        if (typeof retValue === 'string' || retValue === null) {
+                            res.success(retValue)
+                        } else if (retValue instanceof Array) {
+                            if (!isCached && cacheConfig) {
+                                for (const key of cacheConfig.keys) {
+                                    await cache[cacheConfig.action](key, retValue, cacheConfig.ttl)
+                                }
                             }
-                            if (typeof value === 'string' || value === null) {
-                                res.success(value)
-                            } else if (value instanceof Array) {
-                                res.page(value)
-                            } else if (value.items) {
-                                res.page(value.items, value.pageSize, value.pageNo, value.total, value.stats)
-                            } else {
-                                res.data(value)
+                            res.page(retValue)
+                        } else if (retValue.items) {
+                            if (!isCached && cacheConfig) {
+                                for (const key of cacheConfig.keys) {
+                                    await cache[cacheConfig.action](key, retValue, cacheConfig.ttl)
+                                }
                             }
-                        }).catch(err => {
-                            logger.end()
-                            res.failure(err)
-                        })
+                            res.page(retValue.items, retValue.pageSize, retValue.pageNo, retValue.total, retValue.stats)
+                        } else {
+                            if (!isCached && cacheConfig) {
+                                for (const key of cacheConfig.keys) {
+                                    await cache[cacheConfig.action](key, retValue, cacheConfig.ttl)
+                                }
+                            }
+                            res.data(retValue)
+                        }
+                    } catch (err) {
+                        logger.end()
+                        res.failure(err)
                     }
+
                 } catch (err) {
                     logger.end()
                     res.failure(err)
                 }
             })
 
+
+
             switch (handlerOptions.action.toUpperCase()) {
                 case 'GET':
+
                     app.get(handlerOptions.url, fnArray)
                     break
 

@@ -7,6 +7,9 @@ const apiConfig = JSON.parse(JSON.stringify(require('config').api || {}))
 const serviceConfig = JSON.parse(JSON.stringify(require('config').service || {}))
 const auth = require('../auth')
 const fieldHelper = require('../helpers/fields')
+const cache = require('../helpers/cache')
+const config = require('../helpers/config')
+const ruleValidator = require('../helpers/rule-validator')
 
 
 const decorateResponse = (res, context, log) => {
@@ -123,6 +126,7 @@ const decorateResponse = (res, context, log) => {
 
         log.silly('page', val)
         log.end()
+
         res.json(val)
     }
 }
@@ -270,6 +274,10 @@ const getContext = async (req, log, options) => {
             return value === undefined ? defaultValue : value
         }
     }
+
+    config.extend(context)
+    cache.extend(context)
+    ruleValidator.extend(context)
 
     context.include = req.query && req.query.include ? req.query.include : []
     context.exclude = req.query && req.query.exclude ? req.query.exclude : []
