@@ -7,8 +7,7 @@ try {
     if (!cacheConfig) {
         console.info("To enable cache configure 'cacheServer' property")
     } else {
-        console.error("error while connecting to cache server:-", err)
-
+        console.error("could not connect to cache server:-", err)
     }
 }
 
