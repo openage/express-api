@@ -82,7 +82,7 @@ exports.parse = async (req, logger) => {
 
     claims.id = fetch(req, 'context', 'id')
     claims.ip = req.ip
-    claims.session = fetch(req, 'session', 'id')
+    // claims.session = fetch(req, 'session', 'id')
     claims.organization = fetch(req, 'organization', 'code') || fetch(req, 'organization', 'id')
     claims.tenant = fetch(req, 'tenant', 'code') || fetch(req, 'tenant', 'id')
 
