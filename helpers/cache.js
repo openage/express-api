@@ -3,14 +3,19 @@ let cache
 try {
     cacheConfig = require('config').get('cache')
     cache = require(`../providers/cache/${cacheConfig.provider}`).connect(cacheConfig)
-    throw new Error("HI")
 } catch (err) {
-    console.error("error while connecting to cache server:-",err)
+    let message
+    if (!cacheConfig) {
+        message = err && err.message ? err.message : ""
+    } else {
+        message = err
+    }
+    console.info("error while connecting to cache server:-", message)
 }
 
 exports.extend = item => {
     item.cache = item.cache || {}
-    if (item.cache) {
+    if (Object.keys(item.cache).length) {
         item.cache.get = async (key, getter) => {
             let value = await cache.get(key)
 
