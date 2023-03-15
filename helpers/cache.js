@@ -1,16 +1,15 @@
 let cacheConfig
 let cache
 try {
-    cacheConfig = require('config').get('cache')
+    cacheConfig = require('config').get('cacheServer')
     cache = require(`../providers/cache/${cacheConfig.provider}`).connect(cacheConfig)
 } catch (err) {
-    let message
     if (!cacheConfig) {
-        message = err && err.message ? err.message : ""
+        console.info("To enable cache configure 'cacheServer' property")
     } else {
-        message = err
+        console.error("error while connecting to cache server:-", err)
+
     }
-    console.info("error while connecting to cache server:-", message)
 }
 
 exports.extend = item => {
