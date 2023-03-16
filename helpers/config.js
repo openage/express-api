@@ -38,7 +38,10 @@ exports.extend = context => {
                     return 'IST'
             }
         }
+        if(value && typeof value == "object"){
+            return _.cloneDeep(value)
+        }
 
-        return _.cloneDeep(value)         
+        return value
     }
 }
