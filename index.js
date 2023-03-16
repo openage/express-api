@@ -217,7 +217,6 @@ var withApp = function (app, apiOptions) {
                             retValue = await req.context.cache.get(cacheConfig.keys[0])
                             if (retValue){
                                 isCached = true
-                                console.error("from cache")
                             }
                         }
 
