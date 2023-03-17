@@ -2,13 +2,12 @@ let cacheConfig
 let cache
 try {
     cacheConfig = require('config').get('cacheServer')
-    cache = require(`../providers/cache/${cacheConfig.provider}`).connect(cacheConfig)
+    cache = require(cacheConfig.type).connect(cacheConfig.config)
 } catch (err) {
     if (!cacheConfig) {
         console.info("To enable cache configure 'cacheServer' property")
     } else {
         console.error("error while connecting to cache server:-", err)
-
     }
 }
 
