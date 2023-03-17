@@ -215,8 +215,9 @@ var withApp = function (app, apiOptions) {
                     try {
                         if (handlerOptions.action === "GET" && cacheConfig) {
                             retValue = await req.context.cache.get(cacheConfig.keys[0])
-                            if (retValue)
+                            if (retValue){
                                 isCached = true
+                            }
                         }
 
                         if (!retValue) {

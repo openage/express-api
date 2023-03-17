@@ -1,4 +1,5 @@
 const defaultConfig = require('config')
+let _ = require('lodash');
 
 exports.extend = context => {
     const getValue = (identifier, value) => {
@@ -36,6 +37,9 @@ exports.extend = context => {
                 case 'timeZone':
                     return 'IST'
             }
+        }
+        if(value && typeof value == "object"){
+            return _.cloneDeep(value)
         }
 
         return value
