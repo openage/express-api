@@ -3,42 +3,63 @@
 const validator = require('validator')
 
 // eslint-disable-next-line no-extend-native
-String.prototype.toObjectId = function () {
+const toObjectId = function (key) {
+    if (typeof key != "string") {
+        throw new Error("key is not a string")
+    }
     const ObjectId = (require('mongoose').Types.ObjectId)
-    return new ObjectId(this.toString())
+    return new ObjectId(key.toString())
 }
 
 // eslint-disable-next-line no-extend-native
-String.prototype.isObjectId = function () {
-    return validator.isMongoId(this)
+const isObjectId = function (key) {
+    if (typeof key != "string") {
+        throw new Error("key is not a string")
+    }
+    return validator.isMongoId(key)
 }
 
-String.prototype.isEmail = function () {
-    return validator.isEmail(this)
+const isEmail = function (key) {
+    if (typeof key != "string") {
+        throw new Error("key is not a string")
+    }
+    return validator.isEmail(key)
 }
 
-String.prototype.isPhone = function () {
-    const code = this
+const isPhone = function (key) {
+    if (typeof key != "string") {
+        throw new Error("key is not a string")
+    }
+    const code = key
 
     return code.match(/^\d{10}$/) ||
         code.match(/^(\+\d{1,3}[- ]?)?\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})$/) ||
         code.match(/^(\+\d{1,3}[- ]?)?\(?([0-9]{2})\)?[-. ]?([0-9]{4})[-. ]?([0-9]{4})$/)
 }
 
-String.prototype.isMobile = function () {
-    const code = this
+const isMobile = function (key) {
+    if (typeof key != "string") {
+        throw new Error("key is not a string")
+    }
+    const code = key
 
     return code.match(/^\d{10}$/) ||
         code.match(/^(\+\d{1,3}[- ]?)?\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})$/) ||
         code.match(/^(\+\d{1,3}[- ]?)?\(?([0-9]{2})\)?[-. ]?([0-9]{4})[-. ]?([0-9]{4})$/)
 }
 
-String.prototype.isUUID = function () {
-    return validator.isUUID(this)
+const isUUID = function (key) {
+    if (typeof key != "string") {
+        throw new Error("key is not a string")
+    }
+    return validator.isUUID(key)
 }
 
-String.prototype.toTitleCase = function () {
-    const str = this
+const toTitleCase = function (key) {
+    if (typeof key != "string") {
+        throw new Error("key is not a string")
+    }
+    const str = key
 
     return str.toLowerCase().trim().split(' ').map((word) => {
         return word ? word.replace(word[0], word[0].toUpperCase()) : word
@@ -46,8 +67,11 @@ String.prototype.toTitleCase = function () {
 }
 
 // eslint-disable-next-line no-extend-native
-String.prototype.inject = function (data, context) {
-    const template = this
+const inject = function (key, data, context) {
+    if (typeof key != "string") {
+        throw new Error("key is not a string")
+    }
+    const template = key
     let isObject = false
     // eslint-disable-next-line space-before-function-paren
     function getValue(obj, is, value) {
@@ -64,7 +88,7 @@ String.prototype.inject = function (data, context) {
             return obj[is[0]] = value
         } else if (is.length === 0) {
             if (obj && (typeof obj === 'object')) {
-                if((Object.keys(obj).length != 0)){
+                if ((Object.keys(obj).length != 0)) {
                     isObject = true
                     let l = {}
                     let keys = Object.keys(obj)
@@ -78,7 +102,7 @@ String.prototype.inject = function (data, context) {
                     obj = ""
                 }
 
-            } 
+            }
             return obj
         } else {
             const prop = is.shift()
@@ -118,3 +142,14 @@ const removeDoubleQuotes = (templateString, replateArray) => {
 }
 
 global.toObjectId = id => require('mongoose').Types.ObjectId(id)
+
+module.exports = {
+    toObjectId,
+    isObjectId,
+    isEmail,
+    isPhone,
+    isMobile,
+    isUUID,
+    toTitleCase,
+    inject
+}
