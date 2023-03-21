@@ -3,7 +3,7 @@ const appRoot = require('app-root-path')
 const requestHelper = require('./middlewares/request')
 const validationHelper = require('./middlewares/validation')
 const bulkHelper = require('./middlewares/bulk')
-require('./helpers/string')
+const stringHelper = require('./helpers/string')
 require('./helpers/cache')
 
 const about = require('../../../package.json')
@@ -33,7 +33,7 @@ const getCacheConfig = (req, handlerOptions) => {
 
 
     for (const key of cache.keys) {
-        keys.push(`${about.name}:${key.inject(req, context)}`)
+        keys.push(`${about.name}:${stringHelper.inject(key, req, context)}`)
     }
 
     cache.keys = keys
