@@ -259,7 +259,7 @@ var withApp = function (app, apiOptions) {
 
                     let retValue
                     let isCached = false
-                    let keys
+                    let keys = []
                     try {
                         if (handlerOptions.action === "GET" && cacheConfig) {
                             retValue = await req.context.cache.get(cacheConfig.keys[0])
