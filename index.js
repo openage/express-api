@@ -30,8 +30,8 @@ const getValue = (obj, key, i = 0) => {
 const getCacheKeys = (dataSource, cacheConfig, context) => {
     let keys = cacheConfig.keys
     let newKeys = {
-        primaryKeies: [],
-        secondryKeies: []
+        primary: [],
+        secondry: []
     }
     for (let key of keys) {
         if (key.startsWith('key=')) {
@@ -53,16 +53,16 @@ const getCacheKeys = (dataSource, cacheConfig, context) => {
                 if (Array.isArray(value)) {
                     value.map(v => {
                         if (v && v[attrib])
-                            newKeys.secondryKeies.push(`${prefix}_${v[attrib]}_${suffix}`)
+                            newKeys.secondry.push(`${prefix}_${v[attrib]}_${suffix}`)
                     })
                 } else {
                     if (value && value[attrib])
-                        newKeys.secondryKeies.push(`${prefix}_${value[attrib]}_${suffix}`)
+                        newKeys.secondry.push(`${prefix}_${value[attrib]}_${suffix}`)
                 }
             }
         } else {
             key = stringHelper.inject(key, dataSource, context)
-            newKeys.primaryKeies.push(`${cacheConfig.action == "add" ? about.name+":": ""}${key}`)
+            newKeys.primary.push(`${cacheConfig.action == "add" ? about.name+":": ""}${key}`)
         }
     }
 
@@ -259,6 +259,7 @@ var withApp = function (app, apiOptions) {
 
                     let retValue
                     let isCached = false
+                    let keys = []
                     try {
                         if (handlerOptions.action === "GET" && cacheConfig) {
                             retValue = await req.context.cache.get(cacheConfig.keys[0])
@@ -277,33 +278,32 @@ var withApp = function (app, apiOptions) {
 
                         if (!isCached && cacheConfig) {
                             let dataSource = { ...retValue, ...req }
-                            cacheConfig.keys = getCacheKeys(dataSource, cacheConfig, req.context)
+                            keys = getCacheKeys(dataSource, cacheConfig, req.context)
                         }
 
                         if (typeof retValue === 'string' || retValue === null) {
                             res.success(retValue)
                         } else if (retValue instanceof Array) {
                             if (!isCached && cacheConfig) {
-                                for (const key of cacheConfig.keys) {
+                                for (const key of keys) {
                                     await cache[cacheConfig.action](key, retValue, cacheConfig.ttl)
                                 }
                             }
                             res.page(retValue)
                         } else if (retValue.items) {
                             if (!isCached && cacheConfig) {
-                                for (const key of cacheConfig.keys) {
+                                for (const key of keys) {
                                     await cache[cacheConfig.action](key, retValue, cacheConfig.ttl)
                                 }
                             }
                             res.page(retValue.items, retValue.pageSize, retValue.pageNo, retValue.total, retValue.stats)
                         } else {
                             if (!isCached && cacheConfig) {
-
-                                for (const key of cacheConfig.keys.primaryKeies) {
+                                for (const key of keys.primary) {
                                     await cache[cacheConfig.action](key, retValue, cacheConfig.ttl)
                                 }
-                                for (const key of cacheConfig.keys.secondryKeies) {
-                                    await cache[cacheConfig.action](key, cacheConfig.keys.primaryKeies[0], cacheConfig.ttl)
+                                for (const key of keys.secondry) {
+                                    await cache[cacheConfig.action](key, keys.primary[0], cacheConfig.ttl)
                                 }
                             }
                             res.data(retValue)
