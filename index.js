@@ -14,6 +14,61 @@ const apiConfig = JSON.parse(JSON.stringify(require('config').api || {}))
 apiConfig.dir = apiConfig.dir || 'api'
 apiConfig.root = apiConfig.root || 'api'
 
+const getValue = (obj, key, i = 0) => {
+    if (typeof obj == 'object' && !obj.hasOwnProperty(key[i])) {
+        return null
+    } else if (obj[key[i]] && typeof obj[key[i]] == 'object' && !Array.isArray(obj[key[i]])) {
+        if (i == key.length - 1) {
+            return obj[key[i]]
+        }
+        return getValue(obj[key[i]], key, i + 1)
+    } else {
+        return obj[key[i]]
+    }
+}
+
+const getCacheKeys = (dataSource, cacheConfig, context) => {
+    let keys = cacheConfig.keys
+    let newKeys = {
+        primary: [],
+        secondry: []
+    }
+    for (let key of keys) {
+        if (key.startsWith('key=')) {
+            key = key.split("=")[1]
+            let joins = key.split("-")[0]
+            let suffix = key.split("-")[1]
+            suffix = stringHelper.inject(suffix, dataSource, context)
+            joins = joins.slice(1)
+            joins = joins.slice(0, -1)
+            joins = joins.split(",")
+            for (let join of joins) {
+                let n = join.match(/\$\{(.+?)\}/)
+                let prefix = `${about.name}:${join.substring(0, n.index - 1)}`
+                n = n[1]
+                n = n.split(".")
+                let attrib = n.pop()
+                n = n.join(".")
+                let value = getValue(dataSource, n.split("."))
+                if (Array.isArray(value)) {
+                    value.map(v => {
+                        if (v && v[attrib])
+                            newKeys.secondry.push(`${prefix}_${v[attrib]}_${suffix}`)
+                    })
+                } else {
+                    if (value && value[attrib])
+                        newKeys.secondry.push(`${prefix}_${value[attrib]}_${suffix}`)
+                }
+            }
+        } else {
+            key = stringHelper.inject(key, dataSource, context)
+            newKeys.primary.push(`${cacheConfig.action == "add" ? about.name+":": ""}${key}`)
+        }
+    }
+
+    return newKeys
+}
+
 const getCacheConfig = (req, handlerOptions) => {
 
     let context = req.context
@@ -23,20 +78,12 @@ const getCacheConfig = (req, handlerOptions) => {
     if (!cache) {
         return
     }
-    let keys = []
 
     cache.keys = cache.keys || cache.key
 
     if (!Array.isArray(cache.keys)) {
         cache.keys = [cache.keys]
     }
-
-
-    for (const key of cache.keys) {
-        keys.push(`${about.name}:${stringHelper.inject(key, req, context)}`)
-    }
-
-    cache.keys = keys
 
     if (cache.condition && !req.context.ruleValidator.check(req, cache.condition)) {
         return
@@ -212,10 +259,11 @@ var withApp = function (app, apiOptions) {
 
                     let retValue
                     let isCached = false
+                    let keys = []
                     try {
                         if (handlerOptions.action === "GET" && cacheConfig) {
                             retValue = await req.context.cache.get(cacheConfig.keys[0])
-                            if (retValue){
+                            if (retValue) {
                                 isCached = true
                             }
                         }
@@ -228,26 +276,34 @@ var withApp = function (app, apiOptions) {
                             return
                         }
 
+                        if (!isCached && cacheConfig) {
+                            let dataSource = { ...retValue, ...req }
+                            keys = getCacheKeys(dataSource, cacheConfig, req.context)
+                        }
+
                         if (typeof retValue === 'string' || retValue === null) {
                             res.success(retValue)
                         } else if (retValue instanceof Array) {
                             if (!isCached && cacheConfig) {
-                                for (const key of cacheConfig.keys) {
+                                for (const key of keys.primary) {
                                     await cache[cacheConfig.action](key, retValue, cacheConfig.ttl)
                                 }
                             }
                             res.page(retValue)
                         } else if (retValue.items) {
                             if (!isCached && cacheConfig) {
-                                for (const key of cacheConfig.keys) {
+                                for (const key of keys.primary) {
                                     await cache[cacheConfig.action](key, retValue, cacheConfig.ttl)
                                 }
                             }
                             res.page(retValue.items, retValue.pageSize, retValue.pageNo, retValue.total, retValue.stats)
                         } else {
                             if (!isCached && cacheConfig) {
-                                for (const key of cacheConfig.keys) {
+                                for (const key of keys.primary) {
                                     await cache[cacheConfig.action](key, retValue, cacheConfig.ttl)
+                                }
+                                for (const key of keys.secondry) {
+                                    await cache[cacheConfig.action](key, keys.primary[0], cacheConfig.ttl)
                                 }
                             }
                             res.data(retValue)
