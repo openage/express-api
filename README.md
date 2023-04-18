@@ -2,6 +2,8 @@
 api wrapper for express
 
 
+- implemented caching of the response.
+
 
 ## installation
 
