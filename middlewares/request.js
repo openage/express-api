@@ -25,11 +25,8 @@ const decorateResponse = (res, context, log) => {
         res.json(val)
     }
     res.failure = (error, message) => {
-        if (error.status) {
-            res.status(error.status)
-        }
-
         let val = {
+            status: error.status || 500,
             isSuccess: false,
             message: message || 'Internal Server Error',
             error: 'UNKNOWN',
@@ -38,12 +35,22 @@ const decorateResponse = (res, context, log) => {
 
         if ('errors' in apiConfig && error) {
             let errorCode = (error.code || error.message || error).toUpperCase()
+            // if the section is defined then the error must be 
+            // invalid must be invalid input unless specified otherwise
+            val.status = error.status || 400
 
-            let userMessage = apiConfig.errors[errorCode]
-            if (userMessage) {
-                val.message = userMessage
-                val.code = errorCode
-                val.error = errorCode
+            let userError = apiConfig.errors[errorCode]
+            if (userError) {
+                if (userError instanceof Object) {
+                    val.status = userError.status || val.status
+                    val.message = userError.message
+                    val.code = userError.code || errorCode
+                    val.error = userError.error || val.code
+                } else {
+                    val.message = userError
+                    val.code = errorCode
+                    val.error = errorCode
+                }
             }
         } else if (error) {
             if (typeof error === 'string') {
@@ -55,9 +62,9 @@ const decorateResponse = (res, context, log) => {
             }
         }
 
-        log.error(message || 'failed', error)
+        log.error(message || 'failed', val)
         log.end()
-
+        res.status(val.status)
         res.json(val)
     }
     res.accessDenied = (error, message) => {
