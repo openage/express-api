@@ -11,7 +11,6 @@ const cache = require('../helpers/cache')
 const config = require('../helpers/config')
 const ruleValidator = require('../helpers/rule-validator')
 
-
 const decorateResponse = (res, context, log) => {
     res.success = (message, code, version) => {
         let val = {
@@ -34,13 +33,13 @@ const decorateResponse = (res, context, log) => {
         }
 
         if ('errors' in apiConfig && error) {
-            let errorCode = (error.code || error.message || error).toUpperCase()
-            // if the section is defined then the error must be 
+            let errorCode = (error.code || error.message || error.errorMessage || error).toUpperCase()
+            // if the section is defined then the error must be
             // invalid must be invalid input unless specified otherwise
-            val.status = error.status || 400
 
             let userError = apiConfig.errors[errorCode]
             if (userError) {
+                val.status = error.status || 400
                 if (userError instanceof Object) {
                     val.status = userError.status || val.status
                     val.message = userError.message
@@ -51,6 +50,9 @@ const decorateResponse = (res, context, log) => {
                     val.code = errorCode
                     val.error = errorCode
                 }
+            } else {
+                val.message = error.errorMessage || 'Internal Server Error'
+                val.status = error.status || 500
             }
         } else if (error) {
             if (typeof error === 'string') {
@@ -62,7 +64,7 @@ const decorateResponse = (res, context, log) => {
             }
         }
 
-        log.error(message || 'failed', val)
+        log.error(message || val.message || 'failed', error)
         log.end()
         res.status(val.status)
         res.json(val)
@@ -300,7 +302,6 @@ const getContext = async (req, log, options) => {
 }
 
 exports.getMiddleware = (apiOptions) => {
-
     const contextOptions = {
         builder: null,
         auth: null
