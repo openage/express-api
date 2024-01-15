@@ -8,17 +8,16 @@ require('./helpers/cache')
 
 const about = require('../../../package.json')
 
-
 const apiConfig = JSON.parse(JSON.stringify(require('config').api || {}))
 
 apiConfig.dir = apiConfig.dir || 'api'
 apiConfig.root = apiConfig.root || 'api'
 
 const getValue = (obj, key, i = 0) => {
-    if (typeof obj == 'object' && !obj.hasOwnProperty(key[i])) {
+    if (typeof obj === 'object' && !obj.hasOwnProperty(key[i])) {
         return null
-    } else if (obj[key[i]] && typeof obj[key[i]] == 'object' && !Array.isArray(obj[key[i]])) {
-        if (i == key.length - 1) {
+    } else if (obj[key[i]] && typeof obj[key[i]] === 'object' && !Array.isArray(obj[key[i]])) {
+        if (i === key.length - 1) {
             return obj[key[i]]
         }
         return getValue(obj[key[i]], key, i + 1)
@@ -35,34 +34,36 @@ const getCacheKeys = (dataSource, cacheConfig, context) => {
     }
     for (let key of keys) {
         if (key.startsWith('key=')) {
-            key = key.split("=")[1]
-            let joins = key.split("-")[0]
-            let suffix = key.split("-")[1]
+            key = key.split('=')[1]
+            let joins = key.split('-')[0]
+            let suffix = key.split('-')[1]
             suffix = stringHelper.inject(suffix, dataSource, context)
             joins = joins.slice(1)
             joins = joins.slice(0, -1)
-            joins = joins.split(",")
+            joins = joins.split(',')
             for (let join of joins) {
                 let n = join.match(/\$\{(.+?)\}/)
                 let prefix = `${about.name}:${join.substring(0, n.index - 1)}`
                 n = n[1]
-                n = n.split(".")
+                n = n.split('.')
                 let attrib = n.pop()
-                n = n.join(".")
-                let value = getValue(dataSource, n.split("."))
+                n = n.join('.')
+                let value = getValue(dataSource, n.split('.'))
                 if (Array.isArray(value)) {
                     value.map(v => {
-                        if (v && v[attrib])
+                        if (v && v[attrib]) {
                             newKeys.secondry.push(`${prefix}_${v[attrib]}_${suffix}`)
+                        }
                     })
                 } else {
-                    if (value && value[attrib])
+                    if (value && value[attrib]) {
                         newKeys.secondry.push(`${prefix}_${value[attrib]}_${suffix}`)
+                    }
                 }
             }
         } else {
             key = stringHelper.inject(key, dataSource, context)
-            newKeys.primary.push(`${cacheConfig.action == "add" ? about.name+":": ""}${key}`)
+            newKeys.primary.push(`${cacheConfig.action === 'add' ? about.name + ':' : ''}${key}`)
         }
     }
 
@@ -70,9 +71,10 @@ const getCacheKeys = (dataSource, cacheConfig, context) => {
 }
 
 const getCacheConfig = (req, handlerOptions) => {
-
     let context = req.context
-
+    if (!context || !context.config || !context.config.get) {
+        return
+    }
     let cache = context.config.get(`api.${handlerOptions.code}.cache`, handlerOptions.cache)
 
     if (!cache) {
@@ -212,15 +214,29 @@ module.exports = function (app, apiOptions) {
 }
 
 const getApiResp = (handlerOptions, req, res) => {
-    return new Promise((resolve, rejects) => {
-        handlerOptions.method(req, res).then(value => {
-            resolve(value)
-        }).catch(err => {
-            rejects(err)
-        })
+    return new Promise((resolve, reject) => {
+        if (handlerOptions.method) {
+            return reject(new Error(`${handlerOptions} does not implement method`))
+        }
+
+        let retVal
+        try {
+            retVal = handlerOptions.method(req, res)
+        } catch (err) {
+            reject(err)
+        }
+
+        if (retVal && retVal.then && typeof retVal.then === 'function') {
+            return retVal.then(value => {
+                resolve(value)
+            }).catch(err => {
+                reject(err)
+            })
+        } else {
+            resolve(retVal)
+        }
     })
 }
-
 var withApp = function (app, apiOptions) {
     return {
         register: function (handlerOptions) {
