@@ -1,6 +1,6 @@
 {
     "name": "@open-age/express-api",
-    "version": "2.7.7",
+    "version": "2.7.8",
     "description": "a route helper to convert express to api",
     "main": "index.js",
     "scripts": {

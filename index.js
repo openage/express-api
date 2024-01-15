@@ -215,8 +215,8 @@ module.exports = function (app, apiOptions) {
 
 const getApiResp = (handlerOptions, req, res) => {
     return new Promise((resolve, reject) => {
-        if (handlerOptions.method) {
-            return reject(new Error(`${handlerOptions} does not implement method`))
+        if (!handlerOptions.method) {
+            return reject(new Error(`'${handlerOptions.url}' is not implemented`))
         }
 
         let retVal
