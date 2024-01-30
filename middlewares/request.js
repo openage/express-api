@@ -5,11 +5,11 @@ const logger = require('@open-age/logger')()
 
 const apiConfig = JSON.parse(JSON.stringify(require('config').api || {}))
 const serviceConfig = JSON.parse(JSON.stringify(require('config').service || {}))
-const auth = require('../auth')
+const auth = require('./auth')
 const fieldHelper = require('../helpers/fields')
 const cache = require('../helpers/cache')
 const config = require('../helpers/config')
-const ruleValidator = require('../helpers/rule-validator')
+const rules = require('../helpers/rules')
 
 const decorateResponse = (res, context, log) => {
     res.success = (message, code, version) => {
@@ -170,6 +170,10 @@ const getContext = async (req, log, options) => {
 
     const context = options.builder ? await options.builder(claims, log) : claims
 
+    if (!context.session && claims.session) {
+        context.session = claims.session
+    }
+
     context.id = context.id || claims.id
     context.impersonating = claims.impersonating
 
@@ -185,13 +189,12 @@ const getContext = async (req, log, options) => {
 
     context.permissions = context.permissions || []
 
-    if (isUser) {
-        context.permissions.push('user')
-    } else {
-        context.permissions.push('guest')
+    if (claims.permissions && claims.permissions.length) {
+        context.permissions.push(...claims.permissions)
     }
 
     if (isUser) {
+        context.permissions.push('user')
         if (context.organization) {
             context.permissions.push('organization.user')
         }
@@ -200,6 +203,7 @@ const getContext = async (req, log, options) => {
             context.permissions.push('tenant.user')
         }
     } else {
+        context.permissions.push('guest')
         if (context.organization) {
             context.permissions.push('organization.guest')
         }
@@ -286,7 +290,7 @@ const getContext = async (req, log, options) => {
 
     config.extend(context)
     cache.extend(context)
-    ruleValidator.extend(context)
+    rules.extend(context)
 
     context.include = req.query && req.query.include ? req.query.include : []
     context.exclude = req.query && req.query.exclude ? req.query.exclude : []
@@ -331,27 +335,55 @@ exports.getMiddleware = (apiOptions) => {
             req.context = context
             decorateResponse(res, context, log)
             next()
+            log.end()
         }).catch(err => {
-            let error = err
+            let error = {}
+
+            if (err) {
+                if (typeof err === 'string') {
+                    error.message = err
+                } else {
+                    error = err
+                }
+            }
+
             let errorStatus = 500
-            if (error && error.status) {
+            if (error.status) {
                 errorStatus = error.status
             }
             res.status(errorStatus)
 
-            error.code = error.code || error.message
+            let errorCode = (error.code || error.message || error.errorMessage || 'UNKNOWN').toUpperCase()
 
-            if (errorStatus === 500 && 'errors' in apiConfig) {
-                error.code = 'UNKNOWN'
-                error.message = 'Internal Server Error'
+            let val = {
+                isSuccess: false,
+                message: error.message || 'Internal Server Error',
+                // error: 'UNKNOWN', // TODO: should we return the error
+                code: errorCode
             }
 
-            res.json({
-                isSuccess: false,
-                message: error.message,
-                error: error,
-                code: error.code
-            })
+            if ('errors' in apiConfig) {
+                let userError = apiConfig.errors[errorCode]
+                if (userError) {
+                    if (userError instanceof Object) {
+                        // val.status = userError.status || val.status // TODO: removed this
+                        val.message = userError.message
+                        val.code = userError.code || errorCode
+                        // val.error = userError.error || val.code // TODO: removed this
+                    } else {
+                        val.message = userError
+                        val.code = errorCode
+                        // val.error = errorCode // TODO: removed this
+                    }
+                } else if (errorStatus === 500) {
+                    val.code = 'UNKNOWN'
+                    val.message = 'Internal Server Error'
+                }
+            }
+
+            log.error(err)
+            log.end()
+            res.json(val)
         })
     }
 }

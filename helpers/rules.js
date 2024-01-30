@@ -1,8 +1,8 @@
 
 exports.extend = (context) => {
-    context.ruleValidator = context.ruleValidator || {}
-    context.ruleValidator['check'] = (data, condition) => {
-        if(!data ){
+    context.rules = context.rules || {}
+    context.rules.evaluate = (data, condition) => {
+        if (!data) {
             return false
         }
         let n = evaluate(condition.key, condition.value, condition.operator, data)
@@ -11,14 +11,14 @@ exports.extend = (context) => {
 }
 
 const evaluate = (key, value, operator, data) => {
-    let result = operator != 'OR'
-    value = value == 'null' || value == 'undefined' ? null : value
+    let result = operator !== 'OR'
+    value = value === 'null' || value === 'undefined' ? null : value
 
     if (Array.isArray(value)) {
         for (let i = 0; i < value.length; i++) {
             const v = value[i]
-            if (operator == 'OR') { result = result || evaluate(v.key, v.value, v.operator, data) }
-            if (operator == 'AND') { result = result && evaluate(v.key, v.value, v.operator, data) }
+            if (operator === 'OR') { result = result || evaluate(v.key, v.value, v.operator, data) }
+            if (operator === 'AND') { result = result && evaluate(v.key, v.value, v.operator, data) }
         }
         return result
     } else {
@@ -43,9 +43,9 @@ const evaluate = (key, value, operator, data) => {
 }
 
 const getValue = (obj, key, i = 0) => {
-    if (typeof obj == 'object' && !obj.hasOwnProperty(key[i])) {
+    if (typeof obj === 'object' && !obj.hasOwnProperty(key[i])) {
         return null
-    } else if (obj[key[i]] && typeof obj[key[i]] == 'object') {
+    } else if (obj[key[i]] && typeof obj[key[i]] === 'object') {
         return getValue(obj[key[i]], key, i + 1)
     } else {
         return obj[key[i]]
