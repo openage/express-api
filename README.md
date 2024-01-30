@@ -56,29 +56,106 @@ npm install @open-age/express-api --save
 
 ## Configuration
 
-uses `config` package
+This component uses [config](https://www.npmjs.com/package/config) package. The configuration can be defined at multiple levels.
+1. Code Level
+2. Installation Level
+3. Organization Level
+4. Tenant Level
 
-### Caching the repsponse
+### Caching the response
+
+#### Step 1: Configure cache server
+You need to configure the application to use the cache configuration. Here is an example:
 
 ```JSON
 {
-
-    "api": {
-        "<endpoint-code>": {
-            "cache": {
-                "keys": [],
-                "condition": "=",
-                "action": "set"
+    "cacheServer": {
+        "type":"redis",
+        "config": {
+            "host": "${env:cacheServer.host}",
+            "port": "${env:cacheServer.port}",
+            "options": {
+                "password": "${env:cacheServer.password}",
+                "maxmemory": "1gb",
+                "maxmemoryPolicy": "allkeys-lru"
             }
         }
     }
 }
 ```
 
+Following cache servers are supported
+- [redis](https://github.com/redis/node-redis/tree/master),
+
+
+This would also be used to [cache the authentication](#caching-the-session) data
+
+#### Step 2: Configure the endpoint
+
+You need to set the endpoint to cache the response. It can be defined at one of the following places (in the order of decreasing preference):
+1. In the **tenant** configuration 
+```JSON
+{
+    "config": {
+        "api": {
+            "resource-get-by-id": {
+                "cache": {
+                }
+            }
+        }
+    }
+}
+```
+2. At **service** level 
+```JSON
+{
+
+    "api": {
+        "resource-get-by-id": {
+            "cache": {
+            }
+        }
+    }
+}
+```
+3. In the **spec path** file `specs/paths/:resource.js`. 
+```JSON
+{
+    "url": "/",
+    "get": {
+        "id": "resource-get-by-id",
+        "cache":{
+        }
+    }
+}
+```
+
+The endpoint id, `resource-get-by-id` is defined in `spec/paths/resource.js` file. Even if the id the not defined it will be automatically created according to convention.
+
+The cache section above would take following configuration
+```JSON
+{
+    // unique id with which value will be saved
+    "key": "resource_${query}", 
+    // seconds after which key and it's value will get deleted
+    "ttl": 2000, 
+    // action to perfom when the endpoint is hit (defaults to add)
+    "action": "add",
+    // the condition(optional) that needs to be met 
+    // for the response to be cache response
+    "condition": {
+        "operator": "AND",
+        "value": [{ "key": "query.field","operator": "==", "value": "value" }]
+    }  
+}
+```
+
 **TODO:**
-- [ ] Add examples
+- [ ] Add examples with more conditions
 
 ### Securing an endpoint
+Just like cache you need to [configure](#step-2-configure-the-endpoint) the endpoint by adding `permissions` to it
+
 **TODO:**
 - [ ] Complete documentation
 
@@ -150,6 +227,29 @@ uses `config` package
 }
 
 ```
+##### Caching the session
+
+Add sessions endpoints to the directory provider, and add the cache setting to it. You need to also add [cacheServer](#step-1-configure-cache-server) setting
+
+```JSON
+{
+    "providers": {
+        "directory": {
+            "endpoints": {
+                "sessions": {
+                    "get": {
+                        "cache": {
+                            "ttl": 60000 // 60 seconds
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+If the cache is not defined, then the session won't be cahced
 
 ##### Using directory as auth provider
 

@@ -1,12 +1,12 @@
-const redis = require("redis")
+const redis = require('redis')
 
 let options = {
     port: 6379,
     host: '127.0.0.1',
     options: {
-        "maxmemory-policy": 'allkeys-lru',
+        'maxmemory-policy': 'allkeys-lru',
         maxmemory: '1gb',
-        enable_offline_queue: false,
+        enable_offline_queue: false
     }
 }
 
@@ -19,15 +19,17 @@ const setOptions = (config) => {
         options.host = config.host
     }
 
-    if (config['maxmemory-policy']) {
-        options.options['maxmemory-policy'] = config['maxmemory-policy']
-    }
+    if (config.options) {
+        if (config['maxmemory-policy']) {
+            options.options['maxmemory-policy'] = config.options.maxmemoryPolicy
+        }
 
-    if (config.maxmemory) {
-        options.options.maxmemory = config.maxmemory
-    }
-    if (config.password) {
-        options.options.password = config.password
+        if (config.maxmemory) {
+            options.options.maxmemory = config.options.maxmemory
+        }
+        if (config.password) {
+            options.options.password = config.options.password
+        }
     }
 }
 
@@ -60,9 +62,8 @@ exports.connect = (config) => {
                         reject(err)
                     }
                     resolve(JSON.parse(reply))
-                });
+                })
             })
         }
     }
-
 }

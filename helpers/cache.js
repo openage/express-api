@@ -3,10 +3,11 @@ let cacheConfig
 if (config.has('cacheServer')) {
     cacheConfig = config.get('cacheServer')
 }
-let cache
 
+let cache
 if (cacheConfig && !cacheConfig.disabled) {
-    cache = require(cacheConfig.type).connect(cacheConfig.config)
+    let type = `../providers/cache/${cacheConfig.type || 'redis'}`
+    cache = require(type).connect(cacheConfig.config)
 }
 
 const getErrorMsg = (cacheConfig, err) => {

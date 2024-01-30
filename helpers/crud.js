@@ -175,12 +175,37 @@ module.exports = (serviceCode, collection) => {
             return {}
         }
 
+        // TODO: optimize usage of getService
+        const service = getService(context)
+
+        let cacheConfig
+        if (service.endpoints &&
+            service.endpoints[collection] &&
+            service.endpoints[collection].get &&
+            service.endpoints[collection].get.cache) {
+            cacheConfig = service.endpoints[collection].get.cache
+        }
+
+        if (cacheConfig) {
+            let data = context.cache.get(url)
+
+            if (data) {
+                return data
+            }
+        }
+
         let response = await axios({
             method: 'get',
             url: url,
             headers: getHeader(context)
         })
-        return parseResponse(response, context).data
+
+        const data = parseResponse(response, context).data
+
+        if (cacheConfig) {
+            context.cache.add(url, data, cacheConfig.ttl)
+        }
+        return data
     }
 
     const put = async (id, model, options, context) => {
