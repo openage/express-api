@@ -10,6 +10,7 @@ const fieldHelper = require('../helpers/fields')
 const cache = require('../helpers/cache')
 const config = require('../helpers/config')
 const rules = require('../helpers/rules')
+const errors = require('../helpers/errors')
 
 const decorateResponse = (res, context, log) => {
     res.success = (message, code, version) => {
@@ -25,11 +26,11 @@ const decorateResponse = (res, context, log) => {
     }
     res.failure = (error, message) => {
         let val = {
-            status: error.status || 500,
+            status: error.status || errors.status.UNKNOWN,
             isSuccess: false,
-            message: message || 'Internal Server Error',
-            error: 'UNKNOWN',
-            code: 'UNKNOWN'
+            message: message || errors.messages.UNKNOWN,
+            error: errors.codes.UNKNOWN,
+            code: errors.codes.UNKNOWN
         }
 
         if ('errors' in apiConfig && error) {
@@ -39,7 +40,7 @@ const decorateResponse = (res, context, log) => {
 
             let userError = apiConfig.errors[errorCode]
             if (userError) {
-                val.status = error.status || 400
+                val.status = error.status || errors.status.BAD_REQUEST
                 if (userError instanceof Object) {
                     val.status = userError.status || val.status
                     val.message = userError.message
@@ -51,8 +52,8 @@ const decorateResponse = (res, context, log) => {
                     val.error = errorCode
                 }
             } else {
-                val.message = error.errorMessage || 'Internal Server Error'
-                val.status = error.status || 500
+                val.message = error.errorMessage || errors.messages.UNKNOWN
+                val.status = error.status || errors.status.UNKNOWN
             }
         } else if (error) {
             if (typeof error === 'string') {
@@ -70,16 +71,16 @@ const decorateResponse = (res, context, log) => {
         res.json(val)
     }
     res.accessDenied = (error, message) => {
-        let errorStatus = 400
+        let errorStatus = errors.status.ACCESS_DENIED
         if (error && error.status) {
             errorStatus = error.status
         }
         res.status(errorStatus)
         let val = {
             isSuccess: false,
-            message: message || 'Insufficient Permission',
-            error: 'ACCESS_DENIED',
-            code: 'ACCESS_DENIED'
+            message: message || errors.messages.ACCESS_DENIED,
+            error: errors.codes.ACCESS_DENIED,
+            code: errors.codes.ACCESS_DENIED
         }
 
         if ('errors' in apiConfig && error) {
@@ -347,17 +348,17 @@ exports.getMiddleware = (apiOptions) => {
                 }
             }
 
-            let errorStatus = 500
+            let errorStatus = errors.status.UNKNOWN
             if (error.status) {
                 errorStatus = error.status
             }
             res.status(errorStatus)
 
-            let errorCode = (error.code || error.message || error.errorMessage || 'UNKNOWN').toUpperCase()
+            let errorCode = (error.code || error.message || error.errorMessage || errors.codes.UNKNOWN).toUpperCase()
 
             let val = {
                 isSuccess: false,
-                message: error.message || 'Internal Server Error',
+                message: error.message || errors.messages.UNKNOWN,
                 // error: 'UNKNOWN', // TODO: should we return the error
                 code: errorCode
             }
@@ -375,9 +376,9 @@ exports.getMiddleware = (apiOptions) => {
                         val.code = errorCode
                         // val.error = errorCode // TODO: removed this
                     }
-                } else if (errorStatus === 500) {
-                    val.code = 'UNKNOWN'
-                    val.message = 'Internal Server Error'
+                } else if (errorStatus === errors.status.UNKNOWN) {
+                    val.code = errors.codes.UNKNOWN
+                    val.message = errors.messages.UNKNOWN
                 }
             }
 

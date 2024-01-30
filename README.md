@@ -22,6 +22,8 @@ It also builds the context and adds following mechanisms to it:
 #### Enhanced security: 
 - Implemented session validation with the authentication provider for a more robust authentication mechanism.
 - Improved exception handling by hiding server errors and sending the one in `api.errors` section.
+#### Refactorings
+- Separated all the errors into it own [error file](/helpers/errors.js)
 
 ### Version 2.6.0
 - Implemented caching of the response.
@@ -30,8 +32,14 @@ It also builds the context and adds following mechanisms to it:
 ## Usage
 
 ### Getting hierarchical configuration from the context
+
+**TODO:**
+- [ ] Complete documentation
+
 ### Getting and Setting the Cache
 
+**TODO:**
+- [ ] Complete documentation
 
 ## Setup
 

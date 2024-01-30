@@ -117,8 +117,10 @@ const extractHeaders = (sheet, config) => {
     }
 
     for (let map of columnMap) {
+        let header
+
         if (map.col === undefined) {
-            let header = headers.find(item => item.label === map.label)
+            header = headers.find(item => item.label === map.label)
 
             if (header) {
                 map.col = header.col

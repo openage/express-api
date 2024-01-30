@@ -1,5 +1,7 @@
 const jwt = require('jsonwebtoken')
 
+const errors = require('../helpers/errors')
+
 const auth = JSON.parse(JSON.stringify(require('config').get('auth') || {
     provider: 'directory'
 }))
@@ -90,8 +92,8 @@ exports.parse = async (req, logger) => {
         }
     } catch (err) {
         logger.error(err)
-        let error = new Error('INVALID_TOKEN')
-        error.status = 401
+        let error = new Error(errors.codes.INVALID_TOKEN)
+        error.status = errors.status.INVALID_TOKEN
         throw error
     }
     return claims

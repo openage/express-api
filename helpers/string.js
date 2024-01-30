@@ -1,11 +1,12 @@
 /* eslint-disable no-extend-native */
 'use strict'
 const validator = require('validator')
+const errors = require('./errors')
 
 // eslint-disable-next-line no-extend-native
 const toObjectId = function (key) {
-    if (typeof key != "string") {
-        throw new Error("key is not a string")
+    if (typeof key !== 'string') {
+        throw new Error(errors.codes.INVALID_KEY)
     }
     const ObjectId = (require('mongoose').Types.ObjectId)
     return new ObjectId(key.toString())
@@ -13,22 +14,22 @@ const toObjectId = function (key) {
 
 // eslint-disable-next-line no-extend-native
 const isObjectId = function (key) {
-    if (typeof key != "string") {
-        throw new Error("key is not a string")
+    if (typeof key !== 'string') {
+        throw new Error(errors.codes.INVALID_KEY)
     }
     return validator.isMongoId(key)
 }
 
 const isEmail = function (key) {
-    if (typeof key != "string") {
-        throw new Error("key is not a string")
+    if (typeof key !== 'string') {
+        throw new Error(errors.codes.INVALID_KEY)
     }
     return validator.isEmail(key)
 }
 
 const isPhone = function (key) {
-    if (typeof key != "string") {
-        throw new Error("key is not a string")
+    if (typeof key !== 'string') {
+        throw new Error(errors.codes.INVALID_KEY)
     }
     const code = key
 
@@ -38,8 +39,8 @@ const isPhone = function (key) {
 }
 
 const isMobile = function (key) {
-    if (typeof key != "string") {
-        throw new Error("key is not a string")
+    if (typeof key !== 'string') {
+        throw new Error(errors.codes.INVALID_KEY)
     }
     const code = key
 
@@ -49,15 +50,15 @@ const isMobile = function (key) {
 }
 
 const isUUID = function (key) {
-    if (typeof key != "string") {
-        throw new Error("key is not a string")
+    if (typeof key !== 'string') {
+        throw new Error(errors.codes.INVALID_KEY)
     }
     return validator.isUUID(key)
 }
 
 const toTitleCase = function (key) {
-    if (typeof key != "string") {
-        throw new Error("key is not a string")
+    if (typeof key !== 'string') {
+        throw new Error(errors.codes.INVALID_KEY)
     }
     const str = key
 
@@ -68,8 +69,8 @@ const toTitleCase = function (key) {
 
 // eslint-disable-next-line no-extend-native
 const inject = function (key, data, context) {
-    if (typeof key != "string") {
-        throw new Error("key is not a string")
+    if (typeof key !== 'string') {
+        throw new Error(errors.codes.INVALID_KEY)
     }
     const template = key
     let isObject = false
@@ -80,7 +81,7 @@ const inject = function (key, data, context) {
         }
         if (is.length === 1 && value !== undefined) {
             // eslint-disable-next-line no-return-assign
-            if ((typeof obj === 'object') && (Object.keys(obj).length != 0)) {
+            if ((typeof obj === 'object') && (Object.keys(obj).length !== 0)) {
                 isObject = true
                 value = JSON.stringify(value)
             }
@@ -88,7 +89,7 @@ const inject = function (key, data, context) {
             return obj[is[0]] = value
         } else if (is.length === 0) {
             if (obj && (typeof obj === 'object')) {
-                if ((Object.keys(obj).length != 0)) {
+                if ((Object.keys(obj).length !== 0)) {
                     isObject = true
                     let l = {}
                     let keys = Object.keys(obj)
@@ -99,9 +100,8 @@ const inject = function (key, data, context) {
                     obj = l
                     obj = JSON.stringify(obj)
                 } else {
-                    obj = ""
+                    obj = ''
                 }
-
             }
             return obj
         } else {

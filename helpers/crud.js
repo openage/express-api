@@ -36,7 +36,7 @@ module.exports = (serviceCode, collection) => {
             return
         }
 
-        return service.url
+        return service
     }
 
     const getCollectionUrl = (options, context) => {
