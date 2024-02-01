@@ -1,5 +1,5 @@
-const redis = require("memCache")
-const client = redis.createClient()
+const provider = require('memCache')
+const client = provider.createClient()
 
 exports.add = () => {
 

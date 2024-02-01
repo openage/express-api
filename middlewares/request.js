@@ -5,11 +5,12 @@ const logger = require('@open-age/logger')()
 
 const apiConfig = JSON.parse(JSON.stringify(require('config').api || {}))
 const serviceConfig = JSON.parse(JSON.stringify(require('config').service || {}))
-const auth = require('../auth')
+const auth = require('./auth')
 const fieldHelper = require('../helpers/fields')
 const cache = require('../helpers/cache')
 const config = require('../helpers/config')
-const ruleValidator = require('../helpers/rule-validator')
+const rules = require('../helpers/rules')
+const errors = require('../helpers/errors')
 
 const decorateResponse = (res, context, log) => {
     res.success = (message, code, version) => {
@@ -25,11 +26,11 @@ const decorateResponse = (res, context, log) => {
     }
     res.failure = (error, message) => {
         let val = {
-            status: error.status || 500,
+            status: error.status || errors.status.UNKNOWN,
             isSuccess: false,
-            message: message || 'Internal Server Error',
-            error: 'UNKNOWN',
-            code: 'UNKNOWN'
+            message: message || errors.messages.UNKNOWN,
+            error: errors.codes.UNKNOWN,
+            code: errors.codes.UNKNOWN
         }
 
         if ('errors' in apiConfig && error) {
@@ -39,7 +40,7 @@ const decorateResponse = (res, context, log) => {
 
             let userError = apiConfig.errors[errorCode]
             if (userError) {
-                val.status = error.status || 400
+                val.status = error.status || errors.status.BAD_REQUEST
                 if (userError instanceof Object) {
                     val.status = userError.status || val.status
                     val.message = userError.message
@@ -51,8 +52,8 @@ const decorateResponse = (res, context, log) => {
                     val.error = errorCode
                 }
             } else {
-                val.message = error.errorMessage || 'Internal Server Error'
-                val.status = error.status || 500
+                val.message = error.errorMessage || errors.messages.UNKNOWN
+                val.status = error.status || errors.status.UNKNOWN
             }
         } else if (error) {
             if (typeof error === 'string') {
@@ -70,16 +71,16 @@ const decorateResponse = (res, context, log) => {
         res.json(val)
     }
     res.accessDenied = (error, message) => {
-        let errorStatus = 400
+        let errorStatus = errors.status.ACCESS_DENIED
         if (error && error.status) {
             errorStatus = error.status
         }
         res.status(errorStatus)
         let val = {
             isSuccess: false,
-            message: message || 'Insufficient Permission',
-            error: 'ACCESS_DENIED',
-            code: 'ACCESS_DENIED'
+            message: message || errors.messages.ACCESS_DENIED,
+            error: errors.codes.ACCESS_DENIED,
+            code: errors.codes.ACCESS_DENIED
         }
 
         if ('errors' in apiConfig && error) {
@@ -170,6 +171,10 @@ const getContext = async (req, log, options) => {
 
     const context = options.builder ? await options.builder(claims, log) : claims
 
+    if (!context.session && claims.session) {
+        context.session = claims.session
+    }
+
     context.id = context.id || claims.id
     context.impersonating = claims.impersonating
 
@@ -185,13 +190,12 @@ const getContext = async (req, log, options) => {
 
     context.permissions = context.permissions || []
 
-    if (isUser) {
-        context.permissions.push('user')
-    } else {
-        context.permissions.push('guest')
+    if (claims.permissions && claims.permissions.length) {
+        context.permissions.push(...claims.permissions)
     }
 
     if (isUser) {
+        context.permissions.push('user')
         if (context.organization) {
             context.permissions.push('organization.user')
         }
@@ -200,6 +204,7 @@ const getContext = async (req, log, options) => {
             context.permissions.push('tenant.user')
         }
     } else {
+        context.permissions.push('guest')
         if (context.organization) {
             context.permissions.push('organization.guest')
         }
@@ -286,7 +291,7 @@ const getContext = async (req, log, options) => {
 
     config.extend(context)
     cache.extend(context)
-    ruleValidator.extend(context)
+    rules.extend(context)
 
     context.include = req.query && req.query.include ? req.query.include : []
     context.exclude = req.query && req.query.exclude ? req.query.exclude : []
@@ -331,27 +336,50 @@ exports.getMiddleware = (apiOptions) => {
             req.context = context
             decorateResponse(res, context, log)
             next()
+            log.end()
         }).catch(err => {
-            let error = err
-            let errorStatus = 500
-            if (error && error.status) {
-                errorStatus = error.status
+            let error = {}
+
+            if (err) {
+                if (typeof err === 'string') {
+                    error.message = err
+                } else {
+                    error = err
+                }
             }
-            res.status(errorStatus)
+            let errorStatus = error && error.status ? error.status : errors.status.UNKNOWN
+            let errorCode = (error.code || error.message || error.errorMessage || errors.codes.UNKNOWN).toUpperCase()
 
-            error.code = error.code || error.message
-
-            if (errorStatus === 500 && 'errors' in apiConfig) {
-                error.code = 'UNKNOWN'
-                error.message = 'Internal Server Error'
-            }
-
-            res.json({
+            let val = {
                 isSuccess: false,
-                message: error.message,
-                error: error,
-                code: error.code
-            })
+                message: error.message || errors.messages.UNKNOWN,
+                // error: 'UNKNOWN', // TODO: should we return the error
+                code: errorCode
+            }
+
+            if ('errors' in apiConfig) {
+                let userError = apiConfig.errors[errorCode]
+                if (userError) {
+                    if (userError instanceof Object) {
+                        // val.status = userError.status || val.status // TODO: removed this
+                        errorStatus = userError.status || errorStatus
+                        val.message = userError.message
+                        val.code = userError.code || errorCode
+                        // val.error = userError.error || val.code // TODO: removed this
+                    } else {
+                        val.message = userError
+                        val.code = errorCode
+                        // val.error = errorCode // TODO: removed this
+                    }
+                } else if (errorStatus === errors.status.UNKNOWN) {
+                    val.code = errors.codes.UNKNOWN
+                    val.message = errors.messages.UNKNOWN
+                }
+            }
+
+            log.error(err)
+            log.end()
+            res.status(errorStatus).json(val)
         })
     }
 }

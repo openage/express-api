@@ -1,5 +1,5 @@
 const defaultConfig = require('config')
-let _ = require('lodash');
+let _ = require('lodash')
 
 exports.extend = context => {
     const getValue = (identifier, value) => {
@@ -38,7 +38,7 @@ exports.extend = context => {
                     return 'IST'
             }
         }
-        if(value && typeof value == "object"){
+        if (value && typeof value === 'object') {
             return _.cloneDeep(value)
         }
 

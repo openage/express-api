@@ -87,7 +87,7 @@ const getCacheConfig = (req, handlerOptions) => {
         cache.keys = [cache.keys]
     }
 
-    if (cache.condition && !req.context.ruleValidator.check(req, cache.condition)) {
+    if (cache.condition && !req.context.rules.evaluate(req, cache.condition)) {
         return
     }
 
@@ -269,7 +269,6 @@ var withApp = function (app, apiOptions) {
             fnArray.push(async (req, res, next) => {
                 let logger = req.context.logger.start('api')
                 try {
-
                     let cacheConfig = getCacheConfig(req, handlerOptions)
                     let cache = req.context.cache
 
@@ -277,7 +276,7 @@ var withApp = function (app, apiOptions) {
                     let isCached = false
                     let keys = []
                     try {
-                        if (handlerOptions.action === "GET" && cacheConfig) {
+                        if (handlerOptions.action === 'GET' && cacheConfig) {
                             retValue = await req.context.cache.get(cacheConfig.keys[0])
                             if (retValue) {
                                 isCached = true
@@ -328,18 +327,14 @@ var withApp = function (app, apiOptions) {
                         logger.end()
                         res.failure(err)
                     }
-
                 } catch (err) {
                     logger.end()
                     res.failure(err)
                 }
             })
 
-
-
             switch (handlerOptions.action.toUpperCase()) {
                 case 'GET':
-
                     app.get(handlerOptions.url, fnArray)
                     break
 
