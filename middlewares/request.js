@@ -347,13 +347,7 @@ exports.getMiddleware = (apiOptions) => {
                     error = err
                 }
             }
-
-            let errorStatus = errors.status.UNKNOWN
-            if (error.status) {
-                errorStatus = error.status
-            }
-            res.status(errorStatus)
-
+            let errorStatus = error && error.status ? error.status : errors.status.UNKNOWN
             let errorCode = (error.code || error.message || error.errorMessage || errors.codes.UNKNOWN).toUpperCase()
 
             let val = {
@@ -368,6 +362,7 @@ exports.getMiddleware = (apiOptions) => {
                 if (userError) {
                     if (userError instanceof Object) {
                         // val.status = userError.status || val.status // TODO: removed this
+                        errorStatus = userError.status || errorStatus
                         val.message = userError.message
                         val.code = userError.code || errorCode
                         // val.error = userError.error || val.code // TODO: removed this
@@ -384,7 +379,7 @@ exports.getMiddleware = (apiOptions) => {
 
             log.error(err)
             log.end()
-            res.json(val)
+            res.status(errorStatus).json(val)
         })
     }
 }

@@ -11,7 +11,7 @@ exports.isValid = (data, context) => {
         return error
     }
 
-    if (validations.session && data.session && data.session.status && 'in-active|inactive|expired'.indexOf(data.session.status.toLowerCase()) !== -1) {
+    if (validations.session && data.session && data.session.status && 'in-active|inactive|expired'.split('|').indexOf(data.session.status.toLowerCase()) !== -1) {
         let error = errors.codes.SESSION_EXPIRED
         context.logger.warn(error, { status: data.session.status })
         return error

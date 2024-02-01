@@ -1,4 +1,4 @@
-const buildUrl = require('@googlicius/build-url')
+const buildUrl = require('@googlicius/build-url').default
 const axios = require('axios')
 
 module.exports = (serviceCode, collection) => {
@@ -46,9 +46,8 @@ module.exports = (serviceCode, collection) => {
         }
 
         options = options || {}
-
-        let url = buildUrl(service.url, {
-            path: options.path ? `${collection}/${options.path}` : collection,
+        const path = options.path ? `${collection}/${options.path}` : collection
+        let url = buildUrl(`${service.url}/${path}`, {
             queryParams: options.query
         })
 
@@ -59,14 +58,13 @@ module.exports = (serviceCode, collection) => {
 
     const getResourceUrl = (id, options, context) => {
         const service = getService(context)
-        if (!service || !service.url) {
+        if (!service && !service.url) {
             return
         }
 
         options = options || {}
 
-        let url = buildUrl(service.url, {
-            path: `${collection}/${id}`,
+        let url = buildUrl(`${service.url}/${collection}/${id}`, {
             queryParams: options.query
         })
 

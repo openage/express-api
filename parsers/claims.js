@@ -61,6 +61,9 @@ exports.parse = async (req, logger) => {
                 id: data.sessionId
             }
         }
+        if (data.expiry) {
+            claims.expiry = data.expiry
+        }
 
         if (data.contextId) {
             claims.id = data.contextId

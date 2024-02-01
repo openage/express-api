@@ -2,9 +2,9 @@ const uuid = require('uuid')
 const moment = require('moment')
 const config = require('config').get('auth')
 const parser = require('../parsers/claims')
-const validator = require('../validators/claims')
+const validator = require('../validations/claims')
 const errors = require('../helpers/errors')
-
+const cacheHelper = require('../helpers/cache')
 const getProvider = () => {
     let provider = config ? config.provider : 'directory'
 
@@ -27,7 +27,11 @@ exports.claims = async (req, logger) => {
     }
 
     if (provider.sessions && claims.session && claims.session.id) {
-        claims.session = await provider.sessions.get(claims.session.id, { logger: logger })
+        const context = {
+            logger: logger
+        }
+        cacheHelper.extend(context)
+        claims.session = await provider.sessions.get(claims.session.id, context)
     }
 
     let errCode = validator.isValid(claims, { req: req, logger: logger })
