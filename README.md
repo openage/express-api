@@ -21,6 +21,7 @@ It also builds the context and adds following mechanisms to it:
 
 #### Enhanced security: 
 - Implemented session validation with the authentication provider for a more robust authentication mechanism.
+- Implemented session caching to save round trips (see [session caching](#caching-the-session))
 - Improved exception handling by hiding server errors and sending the one in `api.errors` section.
 #### Refactorings
 - Separated all the errors into it own [error file](/helpers/errors.js)
