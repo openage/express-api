@@ -185,7 +185,7 @@ module.exports = (serviceCode, collection) => {
         }
 
         if (cacheConfig) {
-            let data = context.cache.get(url)
+            let data = await context.cache.get(url)
 
             if (data) {
                 return data
@@ -201,7 +201,7 @@ module.exports = (serviceCode, collection) => {
         const data = parseResponse(response, context).data
 
         if (cacheConfig) {
-            context.cache.add(url, data, cacheConfig.ttl)
+            await context.cache.add(url, data, cacheConfig.ttl)
         }
         return data
     }
