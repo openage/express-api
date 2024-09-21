@@ -25,13 +25,11 @@ exports.claims = async (req, logger) => {
         error.status = errors.status.CLAIMS_EXPIRED
         throw error
     }
+    claims.logger = logger
 
     if (provider.sessions && claims.session && claims.session.id) {
-        const context = {
-            logger: logger
-        }
-        cacheHelper.extend(context)
-        claims.session = await provider.sessions.get(claims.session.id, context)
+        cacheHelper.extend(claims)
+        claims.session = await provider.sessions.get(claims.session.id, claims)
     }
 
     let errCode = validator.isValid(claims, { req: req, logger: logger })
@@ -45,6 +43,5 @@ exports.claims = async (req, logger) => {
     claims.ip = req.ip
 
     logger.silly(claims)
-    claims.logger = logger
     return claims
 }
